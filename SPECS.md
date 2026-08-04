@@ -30,7 +30,7 @@ Counts below are from the [DM-32UV operating manual](https://www.manualslib.com/
 | Scan lists | 32 | Confirmed in OEM CPS v1.59 (scan lists 1–32). A channel may appear in any number of scan lists. |
 | Channels per scan list | 16 | Confirmed in OEM CPS v1.59. "Current Channel" is a selectable entry in the available-channels list (registered at index `0`); the rest are your defined channels (e.g. 77 = 2m calling, 78 = 70cm calling). |
 | Digital contacts | 50,000 | CSV import. (Some test firmware traded the record function for ~150K — varies by build.) |
-| RX group lists | `?` | Number of lists unconfirmed. |
+| RX group lists | 32 | Confirmed in OEM CPS v1.59 (RX groups 1–32). |
 | Talk groups per RX group list | 32 | For >32 TGs on one channel, use Group Call Match / promiscuous mode instead. |
 | Contacts per... | `?` | Other per-list contact caps unconfirmed. |
 | Roaming / channel free / APRS entries | `?` | Not yet enumerated. |
