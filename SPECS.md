@@ -42,3 +42,26 @@ Counts below are from the [DM-32UV operating manual](https://www.manualslib.com/
 - **"Current Channel" as a scan member.** The available-channels list in CPS v1.59 includes a "Current Channel" entry (registered at index `0`) alongside your defined channels. Adding it to a scan list means the radio scans whatever channel is currently active in addition to the list's fixed members.
 
 _To fill in the `?` rows: open the OEM CPS, check the max row counts in Scan / RX Group / Zone / Contact tables and drop them here._
+
+## Name Fields & Character Encoding
+
+Name field sizes below are read from the [NeonPlug DM-32UV memory structures](https://github.com/infamy/NeonPlug/blob/main/src/radios/dm32uv/structures.ts) (byte-level codeplug layout). Encoding is **ASCII**, null-terminated, with `0xFF` padding. **Validate max lengths + which characters the OEM CPS actually accepts** against CPS v1.59 — the CPS may enforce a tighter/looser input mask than the raw field allows.
+
+| Field | Name capacity (bytes) | Notes |
+|-------|-----------------------|-------|
+| Channel name | 16 | 16-byte field, null-terminated (so up to ~16 chars, minus terminator if full). |
+| Contact name | 15 | 16-byte field but capped at 15 chars + null terminator. |
+| Zone name | 10 | 11-byte field; max 10 chars to leave room for the null terminator, rest `0xFF`-padded. |
+| Scan list name | 10 | 11-byte field, null-terminated, max 10 chars. |
+| RX group name | 10 | 10-byte field. |
+| Key (encryption) name | 10 | 10-byte ASCII field. |
+| Radio message text | 128 | ASCII, `0xFF`-terminated (not a name, but same encoding). |
+
+### Encoding notes (from NeonPlug)
+- **ASCII only.** NeonPlug decodes/encodes every name with an ASCII TextDecoder/Encoder (`fatal: false`) — non-ASCII input isn't a supported path. UTF-8/emoji in names is unlikely to round-trip.
+- **Null-terminated + `0xFF` padding.** Empty/unused entries are marked with leading `0x00` or `0xFF`; a `0xFF` (or `0x00`) first byte = empty slot.
+- **CPS may be stricter.** These are the *storage* field sizes, not necessarily what the OEM CPS input boxes allow. Things to validate in CPS v1.59:
+  - Actual max characters each name box accepts (does it stop at the byte limits above?).
+  - Whether spaces / punctuation / symbols (`- _ / . # *` etc.) are permitted, or if it's alnum-only.
+  - Whether lowercase is preserved or force-uppercased.
+  - Behavior on over-length paste (truncate vs reject).
