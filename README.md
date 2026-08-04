@@ -24,9 +24,6 @@ _Last checked: 2026-08-04 — verify against the official/archive links above be
 
 | Component | Version (best known) | Notes |
 |-----------|----------------------|-------|
-| Firmware | `dm32.01.02.49` | Digital record function present; standard 50K CSV contacts. |
-| Firmware (prior "test") | `dm32.01.02.48` | No record function; CSV contacts bumped 50K → 150K. |
-| Firmware (freq-expansion) | `dm32.01.02.46` | Community build; expands usable TX/RX ranges (23–136 / 220–520 MHz). Ham use only where licensed. |
 | CPS | Latest from Baofeng download area | Known to be buggy across all revisions per community reports — keep backups. |
 
 ### Board / Case Revisions
