@@ -2,6 +2,10 @@
 
 Quick-reference links for the **Baofeng DM-32UV** DMR handheld.
 
+## Docs
+- [SPECS.md](SPECS.md) — DM-32UV hardware specs
+- [PROGRAMMING-TOOLS.md](PROGRAMMING-TOOLS.md) — OEM CPS vs NeonPlug vs qdmr
+
 ## Links
 
 | What | Link |
