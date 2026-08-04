@@ -26,7 +26,7 @@ Counts below are from the [DM-32UV operating manual](https://www.manualslib.com/
 |-----------|---------------|-------|
 | Channels (total) | 4,000 | Analog + digital combined. |
 | Zones | 250 | Confirmed in OEM CPS v1.59 (zones 1–250). No default "all channels" zone — a channel must be in ≥1 zone to appear on the radio. |
-| Channels per zone | 64 | Analog and/or digital, per the manual. |
+| Channels per zone | 64 | Confirmed in OEM CPS v1.59 (channels 1–64 per zone). Analog and/or digital. |
 | Scan lists | Multiple | Exact max `?`. A channel may appear in any number of scan lists. |
 | Channels per scan list | 16 | Observed on fw `DM32.01.L01.048` / CPS `1.45`; may change across versions. |
 | Digital contacts | 50,000 | CSV import. (Some test firmware traded the record function for ~150K — varies by build.) |
