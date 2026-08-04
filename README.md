@@ -35,7 +35,7 @@ _Last checked: 2026-08-04 — verify against the official/archive links above be
 - 2025+ boards may differ. Recent case rev: narrower display bezel (improvement over earlier wide-bezel units).
 
 ## Related Chicago Offline Repos
-- [`emuehlstein/NeonPlug`](https://github.com/emuehlstein/NeonPlug) — web-based CPS (Web Serial/BLE), programs the DM-32UV / DP570UV. Live: https://neonplug.app
+- **NeonPlug** — web-based CPS (Web Serial/BLE), programs the DM-32UV / DP570UV. Live: https://neonplug.app · Repo: https://github.com/infamy/NeonPlug
 - [`emuehlstein/dmrconfig_dm32`](https://github.com/emuehlstein/dmrconfig_dm32) — dmrconfig fork adding DM-32 support (superseded by the infamy protocol spec).
 - [`emuehlstein/qdmr`](https://github.com/emuehlstein/qdmr) — GUI DMR programmer (Linux/macOS).
 
