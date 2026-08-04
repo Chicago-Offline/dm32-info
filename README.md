@@ -34,7 +34,7 @@ _Last checked: 2026-08-04 — verify against the official/archive links above be
 ## Related Chicago Offline Repos
 - **NeonPlug** — web-based CPS (Web Serial/BLE), programs the DM-32UV / DP570UV. Live: https://neonplug.app · Repo: https://github.com/infamy/NeonPlug
 - [`emuehlstein/dmrconfig_dm32`](https://github.com/emuehlstein/dmrconfig_dm32) — dmrconfig fork adding DM-32 support (superseded by the infamy protocol spec).
-- [`emuehlstein/qdmr`](https://github.com/emuehlstein/qdmr) — GUI DMR programmer (Linux/macOS).
+- **qdmr** — GUI DMR programmer (Linux/macOS). Home: https://dm3mat.de/software/qdmr/ · Repo: https://github.com/hmatuschek/qdmr
 
 ---
 *Radio params for Chicagoland mesh differ from DMR — this repo is the DMR-radio reference, not the LoRa mesh config.*
