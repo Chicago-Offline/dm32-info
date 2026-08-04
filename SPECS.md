@@ -27,8 +27,8 @@ Counts below are from the [DM-32UV operating manual](https://www.manualslib.com/
 | Channels (total) | 4,000 | Analog + digital combined. |
 | Zones | 250 | Confirmed in OEM CPS v1.59 (zones 1–250). No default "all channels" zone — a channel must be in ≥1 zone to appear on the radio. |
 | Channels per zone | 64 | Confirmed in OEM CPS v1.59 (channels 1–64 per zone). Analog and/or digital. |
-| Scan lists | Multiple | Exact max `?`. A channel may appear in any number of scan lists. |
-| Channels per scan list | 16 | Observed on fw `DM32.01.L01.048` / CPS `1.45`; may change across versions. |
+| Scan lists | 32 | Confirmed in OEM CPS v1.59 (scan lists 1–32). A channel may appear in any number of scan lists. |
+| Channels per scan list | 16 | Confirmed in OEM CPS v1.59 (slots 0–15). Slot `0` = **Current Channel** (not a fixed member). |
 | Digital contacts | 50,000 | CSV import. (Some test firmware traded the record function for ~150K — varies by build.) |
 | RX group lists | `?` | Number of lists unconfirmed. |
 | Talk groups per RX group list | 32 | For >32 TGs on one channel, use Group Call Match / promiscuous mode instead. |
@@ -39,5 +39,6 @@ Counts below are from the [DM-32UV operating manual](https://www.manualslib.com/
 - **Zones are mandatory for display.** Unlike many FM radios, there's no implicit all-channels list; unzoned channels won't show (though they can still sit in a scan list).
 - **Scan lists are separate from zones.** Scanning is driven by scan lists, not by "scan this zone." You may build one scan list per zone, but the 16-channel cap can be smaller than a zone's 64.
 - **Group Call Match ("promiscuous"/digital monitor):** disabling it lets a DMR channel hear any talk group on its frequency + time slot — the workaround when >32 TGs won't fit an RX group list. Carries a wrong-TG transmit hazard.
+- **Scan list slot 0 = Current Channel.** In CPS v1.59, scan lists hold 16 slots (0–15); adding channel `0` inserts the "Current Channel" placeholder rather than a fixed channel, so the active channel is always scanned alongside the fixed members.
 
 _To fill in the `?` rows: open the OEM CPS, check the max row counts in Scan / RX Group / Zone / Contact tables and drop them here._
