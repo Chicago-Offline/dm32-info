@@ -5,6 +5,12 @@ Quick-reference links for the **Baofeng DM-32UV** DMR handheld.
 ## Docs
 - [SPECS.md](SPECS.md) — DM-32UV hardware specs
 - [PROGRAMMING-TOOLS.md](PROGRAMMING-TOOLS.md) — OEM CPS vs NeonPlug vs qdmr
+- [FIRMWARE.md](FIRMWARE.md) — version history, the three hardware lines, AES-256 constant-IV status, SHA256s, recovery
+
+> ⚠️ **DM-32UV is three different radios.** ROW (`DM32.01.*`), Taiwan
+> (`DM32.NRF.*`) and HR Vocoder (`DM32.00.*`) all report the same internal model
+> string `DP570UV`, and flashing across families soft-bricks the radio. Read
+> [FIRMWARE.md](FIRMWARE.md) before flashing anything.
 
 ## Links
 
