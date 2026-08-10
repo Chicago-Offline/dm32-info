@@ -5,12 +5,42 @@ Quick-reference links for the **Baofeng DM-32UV** DMR handheld.
 ## Docs
 - [SPECS.md](SPECS.md) — DM-32UV hardware specs
 - [PROGRAMMING-TOOLS.md](PROGRAMMING-TOOLS.md) — OEM CPS vs NeonPlug vs qdmr
-- [FIRMWARE.md](FIRMWARE.md) — version history, the three hardware lines, AES-256 constant-IV status, SHA256s, recovery
+- [FIRMWARE.md](FIRMWARE.md) — version history, firmware families, AES-256 constant-IV status, SHA256s, recovery
 
-> ⚠️ **DM-32UV is three different radios.** ROW (`DM32.01.*`), Taiwan
-> (`DM32.NRF.*`) and HR Vocoder (`DM32.00.*`) all report the same internal model
-> string `DP570UV`, and flashing across families soft-bricks the radio. Read
-> [FIRMWARE.md](FIRMWARE.md) before flashing anything.
+> ⚠️ **There is more than one kind of DM-32UV, and flashing the wrong firmware
+> soft-bricks the radio.** Every variant reports the same internal model string
+> `DP570UV`, so that string cannot tell them apart. The most reliable
+> non-disassembly tell is the side buttons: **smooth SK1/SK2 = HR Vocoder
+> (`DM32.00.*`)**, **raised tactile ridges = ROW (`DM32.01.*`)**. Verify before
+> writing any image — read [FIRMWARE.md](FIRMWARE.md) first.
+>
+> *Corrected 2026-08-10: this notice previously claimed "three different
+> radios." The count was not supported by the source — see
+> [FIRMWARE.md](FIRMWARE.md#hardware-families-what-is-actually-established).*
+
+## Provenance convention
+
+This repo aggregates a community archive, forum threads, and reverse-engineering
+reports of wildly varying reliability. **Some upstream sources mix first-party
+observation with speculation and unattributed LLM output in the same document.**
+One bad flash soft-bricks a radio, so claims here carry their evidence class:
+
+| Marker | Meaning |
+|--------|---------|
+| *(unmarked)* | First-party upstream statement, or independently verified locally (hashes, extracted version strings). |
+| 🔶 | **Unverified / speculative.** Attribution given inline. Do not act on it without confirming. |
+| ⚠️ | Acting on this incorrectly damages hardware. |
+
+Rules:
+
+1. **Never restate a hedged upstream claim as settled fact.** If the source says
+   "unverified," or is an LLM paraphrase, that hedge travels with the claim.
+2. **Distinguish firmware groupings from hardware revisions.** Distinct binaries
+   may be regional SKUs or vendor rebrands; separate silicon is a stronger claim
+   needing separate evidence.
+3. **Keep safety warnings independent of contested taxonomy.** The soft-brick
+   warning is first-party and must survive any correction to the family model.
+4. **Cite the branch or thread**, not just the repo, so a claim can be re-checked.
 
 ## Links
 
