@@ -7,30 +7,83 @@ archive already hosts them with better provenance. This file records *which*
 image belongs on *which* hardware, plus the SHA256 so you can verify what you
 downloaded. Pull from [M7OCM/DM-32UV](https://github.com/M7OCM/DM-32UV).
 
-## Three hardware lines, three firmware families
+## Firmware families and the soft-brick hazard
 
-The single most important thing on this page: **DM-32UV is not one radio.**
-Flashing the wrong family soft-bricks it. All three families report the same
-internal model string `DP570UV`, so the firmware string is *not* enough to tell
-them apart.
+The single most important thing on this page: **there is more than one kind of
+DM-32UV, and flashing the wrong firmware soft-bricks it.** Radios report the
+same internal model string `DP570UV` regardless, so the model string is *not*
+enough to tell them apart.
 
-| Family | Firmware prefix | Hardware | Archive branch |
-|--------|-----------------|----------|----------------|
-| ROW / common | `DM32.01.*` | Common PCB, sold via AliExpress/Banggood etc. | [`DM-32UV-Firmware-(most-common)`](https://github.com/M7OCM/DM-32UV/tree/DM-32UV-Firmware-(most-common)) |
-| Taiwan / rowa | `DM32.NRF.*` | FT-399DMR / DM-32, sourced from [rowa.com.tw](https://www.rowa.com.tw/store/index.php?route=product/product&path=134&product_id=1731) | same branch, `*_NRF_*` / `*_Fanti_*` files |
-| HR Vocoder | `DM32.00.*` (early ones `01.01`, some `UV32.*`) | HR-C6000 vocoder chipset, "Taiwan version", different chip + hardware | [`HR-Vocoder-DM-32UV-Firmware`](https://github.com/M7OCM/DM-32UV/tree/HR-Vocoder-DM-32UV-Firmware) |
+> **Correction (2026-08-10).** An earlier revision of this page asserted "three
+> hardware lines" as settled fact. That was wrong on two counts and is retracted.
+> See [Hardware families: what is actually established](#hardware-families-what-is-actually-established).
+
+### Firmware families (established — version strings verified locally)
+
+These are **firmware** groupings, taken from the archive's branch layout and
+confirmed by extracting version strings from the binaries.
+
+| Firmware prefix | Files | Archive branch | Notes |
+|-----------------|-------|----------------|-------|
+| `DM32.01.*` | `DM32.01.01.{032,037,039,040,046,047,049}`, `DM32.01.02.046`, `DM32.01.L01.048` | [`DM-32UV-Firmware-(most-common)`](https://github.com/M7OCM/DM-32UV/tree/DM-32UV-Firmware-(most-common)) | Most common type, sold via AliExpress/Banggood etc. |
+| `DM32.NRF.*` | `DM32_NRF_049_20251017.bin` → `DM32.NRF.01.049`<br>`DM32_Fanti_049_20251106.bin` → `DM32.NRF.02.049` | **same branch as above** | Sourced from Taiwan for the FT-399DMR / DM-32 via [rowa.com.tw](https://www.rowa.com.tw/store/index.php?route=product/product&path=134&product_id=1731). |
+| `DM32.00.*` | `DM32.00.01.{034,037,046}HRVocoder.bin` | [`HR-Vocoder-DM-32UV-Firmware`](https://github.com/M7OCM/DM-32UV/tree/HR-Vocoder-DM-32UV-Firmware) | Separate branch. Archive reports early builds used `01.01`, and some used a `UV32.*` prefix instead of `DM32.*`. |
+
+⚠️ **`DM32.NRF.*` lives in the same branch as `DM32.01.*`**, and the archive
+describes those files only by where they were *sourced*, not by distinct
+hardware. Do not read the NRF/Fanti row as a separate hardware line — that was
+the specific error in the earlier revision of this page.
+
+### Hardware families: what is actually established
+
+**Two groupings are supported by the archive's own structure**, in that `00.*`
+and `01.*` are maintained on separate branches with mutual soft-brick warnings:
+
+- `DM32.01.*` — "ROW" / most common
+- `DM32.00.*` — "HR Vocoder" / "Taiwan version"
+
+**What is NOT established:**
+
+- **The count.** The archive's own text says **two** distinct versions, not
+  three. Three *firmware prefixes* is not three *hardware revisions* — distinct
+  binaries are equally consistent with regional SKUs or vendor rebrands.
+- **The HR-C6000 vocoder attribution.** 🔶 The claim that the `00.*` variant uses
+  the HR-C6000 chipset, was developed with a Taiwanese partner, and is
+  restricted by DVSI vocoder IP comes from a block in the archive's HR-Vocoder
+  README explicitly headed *"Additional (unverified) information gleaned from
+  ChatGPT"* and closing with *"make of that what you will!??"*. **Treat as
+  unverified LLM output, not as a hardware fact.** The plausible-sounding
+  reduced-distribution rationale is part of that same unverified block.
+- **Clean separation by board rev.** The archive groups `DM32_UV_V1.2 2024-08-05`
+  as "HR Vocoder **and early non-HRV**" — the same board rev spans both, which
+  argues against a tidy split.
 
 ### Telling them apart without opening the radio
 
-- **Check the installed firmware string first.** `DM32.01.*` → ROW.
-  `DM32.NRF.*` → Taiwan. `DM32.00.*` / `UV32.*` → HR Vocoder.
-- **Side buttons.** The HR Vocoder / Asia-only version has **smooth** SK1/SK2.
-  The ROW model has raised tactile horizontal ridges.
+- **Side buttons** (first-party archive observation, with ASCII art in the
+  HR-Vocoder README). The Asia-only / HR Vocoder version has **smooth** SK1/SK2;
+  the ROW model has raised tactile horizontal ridges. **This is the most
+  reliable non-disassembly tell.**
+- **Installed firmware string.** `DM32.01.*` → most common. `DM32.00.*` /
+  `UV32.*` → HR Vocoder branch. `DM32.NRF.*` → Taiwan-sourced, but see the
+  warning above before inferring hardware from it.
 - **Board revs seen** (list not complete, per archive): `DM32_UV_V1.2 2024-08-05`
   (HR Vocoder and early non-HRV) · `DM32_UV_V1.4 2024-12-20` (common PCB only).
   Boards from 2025 onward may differ.
 - The build-date string inside the binaries is `2022-06-27` across every image
   and is **useless** for identification.
+
+### The soft-brick warning stands on its own
+
+This is **first-party archive text on both firmware branches**, independent of
+any of the hardware-taxonomy uncertainty above:
+
+> If installed on the wrong hardware (ie the HR Vocoder version) it will soft
+> brick the radio, solution is to remove battery, turn device on while pressing
+> SK1 and PTT (reattach battery) and reflash the correct version.
+
+So: **the correction above does not soften the flashing risk.** Verify SK1/SK2
+before writing any image.
 
 ## Version history (ROW / `DM32.01.*`)
 
