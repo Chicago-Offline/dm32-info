@@ -62,8 +62,14 @@ and `01.*` are maintained on separate branches with mutual soft-brick warnings:
 
 - **Side buttons** (first-party archive observation, with ASCII art in the
   HR-Vocoder README). The Asia-only / HR Vocoder version has **smooth** SK1/SK2;
-  the ROW model has raised tactile horizontal ridges. **This is the most
-  reliable non-disassembly tell.**
+  the ROW model has raised tactile horizontal ridges. **This is the best
+  non-disassembly tell we have**, with a provenance caveat: the smooth ↔
+  HR-Vocoder half is a **single-source claim** — the archive maintainer's own
+  prose (above the README's "unverified ChatGPT" block, so not LLM output, but
+  uncorroborated anywhere else as of 2026-09-12). The ridged ↔ ROW half is
+  hardware-verified on two radios (both ridged, both running `DM32.01.*`).
+  Treat "ridged ⇒ safe to flash `01.*`" as solid; treat smooth buttons as
+  "assume HR Vocoder, do not flash `01.*`" — which fails safe either way.
 - **Installed firmware string.** `DM32.01.*` → most common. `DM32.00.*` /
   `UV32.*` → HR Vocoder branch. `DM32.NRF.*` → Taiwan-sourced, but see the
   warning above before inferring hardware from it.
