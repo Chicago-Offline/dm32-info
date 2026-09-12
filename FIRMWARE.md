@@ -54,6 +54,9 @@ and `01.*` are maintained on separate branches with mutual soft-brick warnings:
   ChatGPT"* and closing with *"make of that what you will!??"*. **Treat as
   unverified LLM output, not as a hardware fact.** The plausible-sounding
   reduced-distribution rationale is part of that same unverified block.
+  Board-level RE on ROW units identifies the main chip as the **`HR_C7000`**
+  (CK803S C-SKY core) — see [COMMUNITY.md](COMMUNITY.md) — which is first-party
+  evidence for ROW but leaves the C6000-on-HR-Vocoder claim untested.
 - **Clean separation by board rev.** The archive groups `DM32_UV_V1.2 2024-08-05`
   as "HR Vocoder **and early non-HRV**" — the same board rev spans both, which
   argues against a tidy split.
@@ -102,7 +105,11 @@ before writing any image.
 | `DM32.01.01.046` | — | — | Subject of the 2025 static-disassembly claim that the constant-IV code path was gone. Never verified on air. |
 | `DM32.01.01.047` | — | — | Appearing on newly-sold radios as of late 2025. |
 | `DM32.01.L01.048` | ✗ removed | **150,000** | Baofeng "test" firmware. Traded the record function for extra CSV contact memory. |
-| `DM32.01.01.049` | ✓ restored | 50,000 | Current latest. Also appearing on newly-sold radios. |
+| `DM32.01.01.049` | ✓ restored | 50,000 | Latest in the M7OCM archive. Also appearing on newly-sold radios. |
+
+🔶 A newer build, `DM32_049_20250905.bin` (2025-09-05), circulates on
+infotex58.ru and is not on Baofeng's site — see [COMMUNITY.md](COMMUNITY.md).
+Version string and diff against the archive's `049` unchecked here.
 
 `049` also reportedly adds an analog frequency-copy mode. Community reports of
 low DMR audio on the newest firmware even at max digital mic gain — unconfirmed.

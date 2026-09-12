@@ -6,6 +6,7 @@ Quick-reference links for the **Baofeng DM-32UV** DMR handheld.
 - [SPECS.md](SPECS.md) — DM-32UV hardware specs
 - [PROGRAMMING-TOOLS.md](PROGRAMMING-TOOLS.md) — OEM CPS vs NeonPlug vs qdmr
 - [FIRMWARE.md](FIRMWARE.md) — version history, firmware families, AES-256 constant-IV status, SHA256s, recovery
+- [COMMUNITY.md](COMMUNITY.md) — upstream community map (infotex58.ru et al.), OpenDM-32 (OpenGD77 port), hardware RE (HR_C7000/FD6818), firmware mods
 
 > ⚠️ **There is more than one kind of DM-32UV, and flashing the wrong firmware
 > soft-bricks the radio.** Every variant reports the same internal model string
