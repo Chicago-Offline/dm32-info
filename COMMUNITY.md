@@ -22,19 +22,35 @@ RadioReference all trace back there.
 | [vrtp.ru topic 33914](https://vrtp.ru/index.php?showtopic=33914&st=0) | Second Russian thread. |
 | [RadioReference UV32/DM32 thread](https://forums.radioreference.com/threads/baofeng-uv32-dm32.484874/) | English-language relay of the RU mods; W4KRR's independent hex-mod verification. |
 
-## OpenDM-32: OpenGD77 port in progress
+## OpenDM-32: OpenGD77 port — **released and flashable** (updated 2026-09-17)
 
-Koshak is porting **OpenGD77 to the DM-32** ([topic 1168](http://infotex58.ru/forum/index.php?topic=1168.0),
-started 2025-11-16, active into 2026-05). Status per the thread: hardware
-bring-up essentially done; analog RX/TX working (demo video posted); GPS
-(ATGM336H) working; RTC settable manually or via GPS; per-language text files
-compiled in. Builds on **andynvkz's completed OpenGD77 port to the Zastone
-UV008** — the same platform (the UV008 flash-dump tool working on the DM-32 was
-already documented here).
+Koshak's port of **OpenGD77 to the DM-32** ([topic 1168](http://infotex58.ru/forum/index.php?topic=1168.0),
+started 2025-11-16) has shipped binaries. Builds on **andynvkz's completed OpenGD77 port
+to the Zastone UV008** — the same platform (the UV008 flash-dump tool working on the
+DM-32 was already documented here).
 
-If this matures it does for the DM-32 what OpenGD77 did for the GD-77: moots the
-OEM firmware tradeoffs (048/049 record-vs-contacts regression, the AES question).
-Watch the thread; no public code repo as of 2026-09-12.
+**We have flashed it.** A `DM32.NRF.01.049` ROW unit now runs
+`OpenGD77_DM32_20260711_addid_2018.bin` (`OpenGD77_HS v0.1.18`), flashed entirely from
+macOS. Procedure, hashes, gotchas and the revert path are in
+[FIRMWARE.md → OpenGD77 / OpenDM32](FIRMWARE.md#opengd77--opendm32--released-and-flashable-from-macos).
+
+Earlier status notes, now superseded: hardware bring-up essentially done; analog RX/TX
+working (demo video posted); GPS (ATGM336H) working; RTC settable manually or via GPS;
+per-language text files compiled in.
+
+> ⚠️ Still demo-grade — the author describes *"a number of bugs and incomplete
+> implementation of all functionality"*. It does not yet moot the OEM firmware tradeoffs
+> (048/049 record-vs-contacts regression, the AES question); it makes them optional.
+
+**Roger Clark VK3KYY (the OpenGD77 lead) is directly involved.**
+[`rogerclarkmelbourne/DM32`](https://github.com/rogerclarkmelbourne/DM32) publishes his
+C7000 reverse engineering as pure-Python flash read/write and firmware-loader tools,
+plus an OEM CPS with the Adjust-Mode password stripped. He has also added **DM32/UV008
+support to OpenGD77 CPS** (`E2026.07.13.01`) — note that build is hosted only on
+infotex58.ru; the official mirror still caps at `E2026.05.26.01`.
+
+❌ **The firmware source remains unpublished** — `rogerclarkmelbourne/OpenGD77` 404s, no
+SourceForge project exists, and the only GitHub mirror is frozen at 2022-12. Binary-only.
 
 ## Hardware findings (Koshak board-level RE, ROW units)
 
