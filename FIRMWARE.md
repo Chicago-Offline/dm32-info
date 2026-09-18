@@ -196,6 +196,185 @@ aff6b4dc09dcce45847173defba26e94157cc628af86826e21e5af227bdc52dd  DM32_NRF_049_2
 Sizes: `01.01.049` 869,688 B · `01.L01.048` 860,416 B ·
 `NRF_049` 873,964 B · `Fanti_049` 874,028 B.
 
+## OpenGD77 / OpenDM32 — released, and flashable from macOS
+
+**Status change (2026-09-17): this is no longer "watch the thread".** Builds are
+published, and we have flashed one end-to-end. See [COMMUNITY.md](COMMUNITY.md) for the
+project background; this section is the firmware and flashing record.
+
+First-hand result: a `DM32.NRF.01.049` ROW unit (SK1/SK2 ridged) flashed to
+`OpenGD77_DM32_20260711_addid_2018.bin` and booted into OpenGD77. Whole job done on
+**macOS 26.6 / Apple Silicon** — no Windows, no VM.
+
+### Builds
+
+Attachments on [infotex58.ru topic 1168](http://infotex58.ru/forum/index.php?topic=1168.0).
+That host is slow; allow a 90 s timeout before concluding it is down.
+
+```
+2f5419552a9e365351f8b857dd528e07032ec96a4bb5b73ab1f6d764942fc5ba  OpenGD77_DM32_20260711_addid_2018.bin
+9a07f7d878e5bd0dd3f7a97b280cb455657e9474f77b54a0e7b2e48d4976dcc3  OpenGD77_DM32_20260704.bin
+```
+
+Both 830,842 B; both report `OpenGD77_HS v0.1.18` in `strings`. The `addid` build adds
+DMR ID support and is the newer of the two. The English install PDF is a separate
+attachment (zip sha256 `1679de3c5f2872c8308825fd675a8734b6e166db214133141617fea00298f6d1`).
+
+⚠️ Author's own assessment: the firmware *"contains a number of bugs and incomplete
+implementation of all functionality, but OpenGD77 is enough to demonstrate how it
+works."* Treat as demo-grade. Keep a stock image for the exact build you replaced.
+
+**Container gotcha:** these images are wrapped in the **Baofeng container** — first nine
+bytes are `4246555633322d5632` (`BFUV32-V2`), identical to stock. Loaders therefore
+report them as "official Baofeng firmware" and seek to `0x100`. That is correct; do not
+strip the header.
+
+### Tooling — pure Python, so macOS/Linux work
+
+[`rogerclarkmelbourne/DM32`](https://github.com/rogerclarkmelbourne/DM32) (Roger Clark
+VK3KYY, the OpenGD77 lead) publishes the C7000 reverse engineering as plain Python 3 +
+pyserial — imports are only `serial, time, os, sys`, with **no Windows-only step** for
+backups or firmware loading. `python/` holds `C7000_read_progmem.py`,
+`C7000_read_Q128.py`, `C7000_write_Q128.py` and `DM32_firmware_loader.py`; `CPS_HACKED/`
+holds an OEM CPS with the Adjust-Mode password stripped (press Return at the prompt).
+
+Codeplug writing does **not** need Windows either — see below.
+
+### Codeplug programming from macOS / Linux: the web CPS
+
+**[grid.radio/opengd77](https://grid.radio/opengd77)** lists **DM32 / UV008 (Baofeng
+DM-32)** as a first-class target and drives it over **Web Serial**, so there is no
+driver, no Wine and no VM. It handles both **codeplug programming and firmware
+flashing**, and documents the same update-mode entry we use: *"Hold PTT + SK1 together
+while turning on (green LED = update mode)"*.
+
+Its own notes call out that the DM-32 / UV008 needs no driver on any platform — unlike
+the MK22/STM32 radios (GD-77, DM-1801, RD-5R, MD-UV380, MD-9600, DM-1701), which use
+WebUSB and need Zadig on Windows. The DM-32 path is a plain USB serial port.
+
+**Requires Chrome, Edge or Brave.** Firefox and Safari do not implement Web Serial.
+
+It imports **CSV** for channels, zones, contacts/TGs and TG lists, which means
+[`OpenGD77_SSRFLite_Generator`](https://github.com/emuehlstein/OpenGD77_SSRFLite_Generator)
+feeds it directly and the whole chain stays off Windows:
+
+```
+SSRF-Lite YAML → OpenGD77_SSRFLite_Generator → CSV → grid.radio/opengd77 → radio
+```
+
+It also imports CHIRP CSV and RadioReference exports, and can pull a region of the
+RadioID database server-side.
+
+> Third-party hosted tool. We have verified its stated DM-32 support and feature set,
+> not its source. Treat codeplug contents accordingly, and keep the OEM CPS
+> `E2026.07.13.01` as the reference implementation.
+
+**For radios still on stock firmware**, `qdmr` has native DM-32UV support
+(`lib/dm32uv.cc`, `dm32uv_codeplug.cc`, `dm32uv_callsigndb.cc`) and runs on macOS and
+Linux — see [PROGRAMMING-TOOLS.md](PROGRAMMING-TOOLS.md). That driver speaks the **stock**
+codeplug format, so it does **not** apply to a radio converted to OpenGD77.
+
+### Two upstream scripts abort on healthy radios
+
+Both send their opening handshake exactly once and `assert` on the reply. On macOS +
+CH340 the **first write is reliably swallowed** while the radio's UART wakes, so they
+die on a radio that is working perfectly. Patch both to retry; retrying costs nothing
+because neither has written to the radio at that point.
+
+| Script | Line that fails | Handshake | Good reply |
+|---|---|---|---|
+| `DM32_read_Q128.py` | first `assert` | `PSEARCH` | `06 44 50 35 37 30 55 56` (`\x06DP570UV`) |
+| `DM32_firmware_loader.py` | first `assert` | `0x52` | `0x06` |
+
+Keep everything from the erase command onward byte-identical. **Never** add retries
+around the erase or the block-write loop.
+
+`C7000_read_progmem.py` has the same brittleness mid-transfer: one dropped byte fails
+`assert data[:2] == b'\x02\x05'` and kills a run that is 6 % done. Wrapping each
+256-byte block in up to 8 retries with an input-buffer resync fixed it — on a good run
+the retry counter stays at **0**, so a flaky read means the cable was disturbed, not
+that the line is noisy.
+
+### Back up before flashing — two chips, one irreplaceable
+
+| Dump | Script | Size | Radio state |
+|---|---|---|---|
+| GD25Q128 main flash | `DM32_read_Q128.py` | 16,777,216 B | **on**, stock firmware, cable attached |
+| C7000 program memory | `C7000_read_progmem.py` | 1,048,576 B | **off** at start, then power on normally |
+
+The **Q128 dump holds per-radio RX/TX calibration and the ALPU key — no vendor image can
+restore it.** Take it first. It runs over the stock CPS protocol and needs no boot-time
+handshake; budget ~25 min at 115200. Sanity check: exact size, and mostly `0xFF`
+(88 % erased on our unit) with a few hundred populated 4 KB blocks, including around
+`0xa7000` — which is where upstream's own commented-out `start_addr` points.
+
+The progmem dump is the firmware region, so a byte-exact vendor image is an acceptable
+substitute if a unit will not cooperate. It needs the C7000 init burst `02 24 00 03`,
+which is emitted **only at power-on with the cable already attached**. Despite the
+README's "30 seconds", the wait loop is unbounded, so there is no race.
+
+### 🔴 Cable order: green LED first, cable second
+
+The single biggest time-waster. **Many units will not boot normally with the programming
+plug seated** — the screen stays dark and the radio looks dead while it is in fact
+talking. Judge by script output, never by the screen.
+
+For the flash specifically:
+
+1. Detach the cable **at the radio end only** — leave USB in the host so the bridge does
+   not re-enumerate.
+2. Hold **PTT + SK1** while powering on, until the **green LED** lights.
+3. **Now** plug the cable into the radio.
+
+With the cable seated before update mode, the bootloader never answers — ten consecutive
+`no response` on the init byte, indistinguishable from a wrong button combo.
+
+**Every replug re-enumerates the USB bridge under a new device node**
+(`/dev/cu.usbserial-2120` → `-2110`). Anything bound to the old node dies with
+`OSError: [Errno 6] Device not configured`, which also reads exactly like a dead radio.
+Re-check the node after any cable event.
+
+CH340 (`idProduct` `29987` / `0x7523`), FTDI and CP2102 are all supported;
+`ERROR: communication` means swap the cable.
+
+### A good flash run
+
+```
+bootloader ACK on attempt 1
+Official Baofeng firmware detected.
+Send Erase command. Waiting to for up to 15 seconds for this to finish
+Erase complete
+Sending firmware data
+1% … 99%
+Data send complete
+Send Reboot command
+```
+
+~5 min for an 830 KB image, 812 × 1 KB blocks with CRC16-XMODEM; the last third runs
+slower than the first. Background it and poll rather than setting a kill-timeout.
+
+Verify first boot with the cable **detached at the radio end** and a normal power-on.
+OpenGD77 announces itself with a **`Settings Updated`** screen on the first boot after a
+version change — stock firmware never shows it, so that message alone confirms the port
+is running. Expect channels to be empty or garbage afterwards: the 16 MB flash still
+holds a Baofeng-layout codeplug until CPS writes an OpenGD77 one.
+
+### Reverting
+
+Flash the stock image for the exact build you replaced, the same way. Verify the image
+first with `strings -a IMAGE.bin | grep -Eo 'DM32[._][A-Za-z0-9._]*' | sort -u` and match
+it against the [SHA256](#sha256) table above. The bootloader lives in a separate region
+and survives a failed or interrupted firmware write.
+
+### Do not try to build it
+
+There is no public OpenGD77 firmware source (checked 2026-09-17):
+`rogerclarkmelbourne/OpenGD77` returns 404 and no repo exists under that account,
+SourceForge has no `p/opengd77` project, `opengd77.com/downloads/` is an empty static
+husk, and the only GitHub mirror, [`open-ham/OpenGD77`](https://github.com/open-ham/OpenGD77),
+is frozen at 2022-12 with zero `DM32`/`C7000` hits. The porter's tree is unpublished.
+Flash a released `.bin` or nothing.
+
 ## Recovery and reset
 
 **Soft-brick recovery** (wrong-hardware flash): remove battery, hold **SK1 +

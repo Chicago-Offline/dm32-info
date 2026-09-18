@@ -65,7 +65,7 @@ Forum thread (primary source, Russian): http://infotex58.ru/forum/index.php?topi
 
 An open-firmware replacement for the DM-32, ported from OpenGD77 — the same project family as emuehlstein/OpenGD77_SSRFLite_Generator. Lead: Koshak, building on andynvkz's solo port of OpenGD77 to the Zastone UV008 (same platform — hence the archive's dump tool being named "Open UV008").
 
-Status: thread opened 2025-11-16; alpha as of 2026-07-23 (10 pages), with testers actively flashing and filing bugs. One tester's summary: "The alpha alone is a vast improvement upon the stock firmware and especially the stock CPS which made programming impossible."
+Status (2026-09-17): **released and flashable — we run it.** A `DM32.NRF.01.049` ROW unit now boots `OpenGD77_DM32_20260711_addid_2018.bin` (`OpenGD77_HS v0.1.18`), flashed entirely from macOS with no Windows step. Full procedure, hashes and gotchas: [FIRMWARE.md → OpenGD77 / OpenDM32](FIRMWARE.md#opengd77--opendm32--released-and-flashable-from-macos). Still demo-grade per its author ("a number of bugs and incomplete implementation of all functionality"); source is unpublished, so it is binary-only. Thread opened 2025-11-16; testers actively flashing and filing bugs. One tester's summary: "The alpha alone is a vast improvement upon the stock firmware and especially the stock CPS which made programming impossible."
 
 Working so far: analog RX/TX (pending VC-TCXO reference correction), GPS, RTC (manual or GPS-set). UI language strings are a separate file compiled in, not baked into the binary.
 
