@@ -238,7 +238,41 @@ backups or firmware loading. `python/` holds `C7000_read_progmem.py`,
 `C7000_read_Q128.py`, `C7000_write_Q128.py` and `DM32_firmware_loader.py`; `CPS_HACKED/`
 holds an OEM CPS with the Adjust-Mode password stripped (press Return at the prompt).
 
-Only the **codeplug** write still needs Windows CPS.
+Codeplug writing does **not** need Windows either — see below.
+
+### Codeplug programming from macOS / Linux: the web CPS
+
+**[grid.radio/opengd77](https://grid.radio/opengd77)** lists **DM32 / UV008 (Baofeng
+DM-32)** as a first-class target and drives it over **Web Serial**, so there is no
+driver, no Wine and no VM. It handles both **codeplug programming and firmware
+flashing**, and documents the same update-mode entry we use: *"Hold PTT + SK1 together
+while turning on (green LED = update mode)"*.
+
+Its own notes call out that the DM-32 / UV008 needs no driver on any platform — unlike
+the MK22/STM32 radios (GD-77, DM-1801, RD-5R, MD-UV380, MD-9600, DM-1701), which use
+WebUSB and need Zadig on Windows. The DM-32 path is a plain USB serial port.
+
+**Requires Chrome, Edge or Brave.** Firefox and Safari do not implement Web Serial.
+
+It imports **CSV** for channels, zones, contacts/TGs and TG lists, which means
+[`OpenGD77_SSRFLite_Generator`](https://github.com/emuehlstein/OpenGD77_SSRFLite_Generator)
+feeds it directly and the whole chain stays off Windows:
+
+```
+SSRF-Lite YAML → OpenGD77_SSRFLite_Generator → CSV → grid.radio/opengd77 → radio
+```
+
+It also imports CHIRP CSV and RadioReference exports, and can pull a region of the
+RadioID database server-side.
+
+> Third-party hosted tool. We have verified its stated DM-32 support and feature set,
+> not its source. Treat codeplug contents accordingly, and keep the OEM CPS
+> `E2026.07.13.01` as the reference implementation.
+
+**For radios still on stock firmware**, `qdmr` has native DM-32UV support
+(`lib/dm32uv.cc`, `dm32uv_codeplug.cc`, `dm32uv_callsigndb.cc`) and runs on macOS and
+Linux — see [PROGRAMMING-TOOLS.md](PROGRAMMING-TOOLS.md). That driver speaks the **stock**
+codeplug format, so it does **not** apply to a radio converted to OpenGD77.
 
 ### Two upstream scripts abort on healthy radios
 
