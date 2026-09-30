@@ -433,12 +433,41 @@ and survives a failed or interrupted firmware write.
 
 ### Do not try to build it
 
-There is no public OpenGD77 firmware source (checked 2026-09-17):
-`rogerclarkmelbourne/OpenGD77` returns 404 and no repo exists under that account,
-SourceForge has no `p/opengd77` project, `opengd77.com/downloads/` is an empty static
-husk, and the only GitHub mirror, [`open-ham/OpenGD77`](https://github.com/open-ham/OpenGD77),
-is frozen at 2022-12 with zero `DM32`/`C7000` hits. The porter's tree is unpublished.
-Flash a released `.bin` or nothing.
+There is no public OpenDM32/OpenGD77 **firmware** source (re-verified 2026-09-30):
+`rogerclarkmelbourne/OpenGD77` returns 404, SourceForge has no `p/opengd77` project,
+`opengd77.com/downloads/` is an empty static husk, and the only GitHub mirror,
+[`open-ham/OpenGD77`](https://github.com/open-ham/OpenGD77), is frozen at 2022-12-08 —
+and targets the **HR-C6000** (GD-77, DM-1801, RD-5R), not the DM-32's HR-C7000, so it is
+not a base for this port even if you revived it. A GitHub repo search for `OpenDM32`
+returns **zero** repositories; a code search matches only prose in `M7OCM/DM-32UV`.
+The porter's tree is unpublished. Flash a released `.bin` or nothing.
+
+⚠️ Correction: an earlier revision of this file said "no repo exists under that
+account." That was wrong — the `rogerclarkmelbourne` account is live with ~11 repos,
+including **[`rogerclarkmelbourne/DM32`](https://github.com/rogerclarkmelbourne/DM32)**
+("Baofeng DM32 related things", created 2026-01-24, last pushed 2026-06-25). What is
+missing is specifically an `OpenGD77` repo, not the account.
+
+### What source IS published: `rogerclarkmelbourne/DM32`
+
+Real, readable source — just **tooling, not firmware**. 83 files, and a recursive tree
+scan finds **zero** `.c` / `.h` / `.cpp` / `.s` / `.asm` / `.ld` / `.mk` files.
+No license file is declared on the repo.
+
+- `python/` — the useful part. `C7000_read_Q128.py`, `C7000_write_Q128.py`,
+  `C7000_read_progmem.py`, `C7000_write_progmem.py`, `dm32_read_Q128.py`, and
+  `DM32_firmware_loader.py` (which can detect and handle official firmware files).
+  This is the C7000 flash/progmem read-write layer and the loader — worth reading before
+  writing any of our own DM-32 tooling.
+- `CPS_HACKED/DM32_CPS_HACKED.zip` — 4.3 MB patched CPS.
+- `M7OCM/branches/` — a flattened copy of the `M7OCM/DM-32UV` archive, reorganised from
+  branches into directories (commit 2026-06-25). Carries stock images including
+  `DM32.01.L01.048.bin` (our recommended build), the `DM-32UV-Mods` band-opened
+  images, the `HR-Vocoder-DM-32UV-Firmware` branch, CPS v1.22–v1.60, and
+  `open_uv008.zip` (the Q128 flash-dump tool).
+
+⚠️ That archive also contains `CPS/default-adjust-mode.test`. **Do not load it** — adjust
+mode holds per-radio RF calibration; someone else's values will de-calibrate your radio.
 
 **Reconfirmed 2026-09-30.** Binary-only is the deliberate current state, not an
 oversight: the porter's stated position is that a GitHub repo comes *"once the code base
