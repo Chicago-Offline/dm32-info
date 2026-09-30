@@ -209,20 +209,85 @@ First-hand result: a `DM32.NRF.01.049` ROW unit (SK1/SK2 ridged) flashed to
 ### Builds
 
 Attachments on [infotex58.ru topic 1168](http://infotex58.ru/forum/index.php?topic=1168.0).
-That host is slow; allow a 90 s timeout before concluding it is down.
+That host is slow; allow a 90 s timeout before concluding it is down. Attachments
+download **without a forum login** — a plain `curl` with a browser `User-Agent` and a
+`Referer` on the thread URL is enough:
+
+```bash
+curl -L -A "$UA" -e 'http://infotex58.ru/forum/index.php?topic=1168.150' \
+  -o out.zip "http://infotex58.ru/forum/index.php?action=dlattach;topic=1168.0;attach=4616"
+```
+
+| Posted | `attach=` | Served as | `.bin` SHA256 |
+|---|---|---|---|
+| 2026-07-04 | — | `OpenGD77_DM32_20260704.zip` | `9a07f7d8…dcc3` |
+| 2026-07-11 | 4602 | `OpenGD77_DM32_20260711_addid_2018.zip` | `2f541955…c5ba` |
+| 2026-09-26 | 4614 | `OpenDM32_20260801_DCS_BS_Act.zip` | `6197c140…c556` |
+| **2026-09-27** | **4616** | `OpenDM32.zip` — **HotFix** | `742653d5…5f05` |
 
 ```
-2f5419552a9e365351f8b857dd528e07032ec96a4bb5b73ab1f6d764942fc5ba  OpenGD77_DM32_20260711_addid_2018.bin
 9a07f7d878e5bd0dd3f7a97b280cb455657e9474f77b54a0e7b2e48d4976dcc3  OpenGD77_DM32_20260704.bin
+2f5419552a9e365351f8b857dd528e07032ec96a4bb5b73ab1f6d764942fc5ba  OpenGD77_DM32_20260711_addid_2018.bin
+6197c140d523f237a172aad51ccb1b9c7e21168087be5f3934b97e8d7498c556  OpenDM32_20260801_DCS_BS_Act.bin
+742653d5731cab98fba7f37c60bea24f5762fe63791add1a9d1142a316fb5f05  OpenDM32.bin
 ```
 
-Both 830,842 B; both report `OpenGD77_HS v0.1.18` in `strings`. The `addid` build adds
-DMR ID support and is the newer of the two. The English install PDF is a separate
+Containing zips: `156d7884ea17a9efecb91a3046e6f06b1a1c44b65f1458cf977693f6e246a70e`
+(4614, 286,269 B) · `f50e48cf4b63ed86112550a16067af1fdaf96c6525df6ec6cd9159f9ec28ff7e`
+(4616, 286,258 B).
+
+**Every build is exactly 830,842 B**, and every one reports `OpenGD77_HS v0.1.18` in
+`strings` — that is the hotspot-module string, identical across all four, so it does
+**not** identify a build. ⚠️ **These images carry no version string and no build date**,
+unlike stock firmware which stamps `DM32.01.L01.048` and friends. The forum attachment
+ID, the zip mtime and the SHA256 are the *only* provenance you get, so keep the
+`attach=` ID in your local filename — 4616's inner file is named just `OpenDM32.bin`.
+
+The project renamed itself mid-stream: `OpenGD77_DM32_*` (July) → `OpenDM32*` (August
+onward). Same port, same thread, same author.
+
+The `addid` build adds DMR ID support. The English install PDF is a separate
 attachment (zip sha256 `1679de3c5f2872c8308825fd675a8734b6e166db214133141617fea00298f6d1`).
 
 ⚠️ Author's own assessment: the firmware *"contains a number of bugs and incomplete
 implementation of all functionality, but OpenGD77 is enough to demonstrate how it
 works."* Treat as demo-grade. Keep a stock image for the exact build you replaced.
+
+### Bug status — tester reports through 2026-09-29
+
+Two independent on-air testers are now reporting against these builds in the forum
+thread, which gives the port real regression signal for the first time.
+
+| Symptom | Status |
+|---|---|
+| DCS/DPL not transmitted (RX fine, CTCSS fine) | ✅ **Fixed** by the 2026-09-27 HotFix |
+| Scan will not stop on an active channel | 🔴 **Open** |
+| Analog APRS | 🔴 **Not supported** |
+| Occasional hard freeze, battery pull to recover | ❓ Unaccounted for |
+
+- ✅ **DCS/DPL TX — fixed.** Reported 2026-08-26: receive decoded DPL correctly and
+  CTCSS transmitted fine, but the radio sent no DPL at all, making DPL-coded repeaters
+  unusable. The author shipped a targeted test build (attach 4614, *"Check DCS TX and
+  DMR BS Activation"*) and then the HotFix (attach 4616). **Both testers independently
+  confirm DPL transmit and receive now work.**
+- 🔴 **Scan is broken.** The radio steps through a scan list but will not hold on an
+  active channel — analog or DMR, it pauses for a fraction of a second and moves on.
+  Changing scan delay, dwell time and scan mode makes no difference. Parked on a single
+  channel, receive is fine. Reported against the HotFix and still present after the
+  re-upload. The second tester had not configured scanning, so it is uncorroborated —
+  but also uncontested. **Unresolved as of 2026-09-29.**
+- 🔴 **No analog APRS.** Asked directly, the author confirmed it is not working.
+- ❓ **Hard freeze requiring a battery pull.** Reported alongside the original DPL bug,
+  no follow-up, not mentioned in the HotFix notes. Assume still present.
+- One report of a crash on squelch tail was **retracted by the reporter** — the fault
+  was in a different radio (Tidradio H8), not the DM-32. Do not propagate it.
+- Counterpoint: one tester is running a HotFix radio day-to-day and calls it *"working
+  great"*, so the port is usable for single-channel and manual operation.
+
+**Standing recommendation unchanged: daily-drive stock `DM32.01.L01.048`.** OpenDM32
+earns a lab session on a radio with a Q128 dump already in hand — not a fleet rollout.
+Scan-won't-stop is disqualifying for scanner use, APRS is absent, and the freeze bug is
+unaccounted for.
 
 **Container gotcha:** these images are wrapped in the **Baofeng container** — first nine
 bytes are `4246555633322d5632` (`BFUV32-V2`), identical to stock. Loaders therefore
@@ -374,6 +439,16 @@ SourceForge has no `p/opengd77` project, `opengd77.com/downloads/` is an empty s
 husk, and the only GitHub mirror, [`open-ham/OpenGD77`](https://github.com/open-ham/OpenGD77),
 is frozen at 2022-12 with zero `DM32`/`C7000` hits. The porter's tree is unpublished.
 Flash a released `.bin` or nothing.
+
+**Reconfirmed 2026-09-30.** Binary-only is the deliberate current state, not an
+oversight: the porter's stated position is that a GitHub repo comes *"once the code base
+is more stable and a github can be set up."* Builds are now posted **only** to
+infotex58 — the official OpenGD77 forum is archived and closed to new posts.
+
+⚠️ **OpenDM32 is not Roger Clark's project.** Asked directly, VK3KYY said he has nothing
+to do with it and pointed the questioner back to infotex58. He supplied the DM32-capable
+CPS and publishes the C7000 reverse engineering (above); the firmware port itself is
+other hands. Do not file OpenDM32 bugs against his repos.
 
 ## Recovery and reset
 
