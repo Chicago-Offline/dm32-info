@@ -431,24 +431,80 @@ first with `strings -a IMAGE.bin | grep -Eo 'DM32[._][A-Za-z0-9._]*' | sort -u` 
 it against the [SHA256](#sha256) table above. The bootloader lives in a separate region
 and survives a failed or interrupted firmware write.
 
-### Do not try to build it
+### Source availability
 
-There is no public OpenDM32/OpenGD77 **firmware** source (re-verified 2026-09-30):
-`rogerclarkmelbourne/OpenGD77` returns 404, SourceForge has no `p/opengd77` project,
-`opengd77.com/downloads/` is an empty static husk, and the only GitHub mirror,
-[`open-ham/OpenGD77`](https://github.com/open-ham/OpenGD77), is frozen at 2022-12-08 —
-and targets the **HR-C6000** (GD-77, DM-1801, RD-5R), not the DM-32's HR-C7000, so it is
-not a base for this port even if you revived it. A GitHub repo search for `OpenDM32`
-returns **zero** repositories; a code search matches only prose in `M7OCM/DM-32UV`.
-The porter's tree is unpublished. Flash a released `.bin` or nothing.
+**OpenDM32 (this port): no public source.** A GitHub repo search for `OpenDM32` returns
+**zero** repositories; a code search matches only prose in `M7OCM/DM-32UV`. The porter's
+tree is unpublished, and binary-only is the deliberate current state (see below). For the
+DM-32 specifically: flash a released `.bin` or nothing.
 
-⚠️ Correction: an earlier revision of this file said "no repo exists under that
-account." That was wrong — the `rogerclarkmelbourne` account is live with ~11 repos,
-including **[`rogerclarkmelbourne/DM32`](https://github.com/rogerclarkmelbourne/DM32)**
-("Baofeng DM32 related things", created 2026-01-24, last pushed 2026-06-25). What is
-missing is specifically an `OpenGD77` repo, not the account.
+🔴 **OpenGD77 (the parent project): full source IS published — corrected 2026-09-30.**
+Earlier revisions of this file claimed there was no public OpenGD77 source. **That was
+wrong.** The reason is worth recording, because checking GitHub alone will reproduce the
+error every time.
 
-### What source IS published: `rogerclarkmelbourne/DM32`
+Roger Clark (VK3KYY) **deliberately abandoned the GitHub repo.** In his forum thread *"On
+Profiteering and Free Software"* he states he will *"not be updating the repo with even
+the Release versions of source code, to prevent these vendors compiling"* and selling
+radios built on his work. Consequently:
+
+- `rogerclarkmelbourne/OpenGD77` → 404, and that account hosts no OpenGD77 repo.
+- [`open-ham/OpenGD77`](https://github.com/open-ham/OpenGD77), frozen at 2022-12-08, is a
+  **deliberate blackout, not a dead project.**
+- Complete source instead ships **inside every release bundle.**
+
+```
+https://www.opengd77.com/downloads/releases/<PLATFORM>/<RELEASE>/sources_and_tools/
+```
+
+Platforms: `MK22`, `MDUV380_DM1701`, `MD9600`, `MD380`, `MD2017`, plus `Build_tools`
+and `Voice_Prompts`. Latest release is **R20260131**. MK22 history: R20210529 →
+R20210711 → R20220228 → R20230304 → R20231231 → R20240908 → R20260131. Mirror:
+`opengd77.eu`.
+
+⚠️ Those directory indexes require raw `curl` — readability-based extractors return
+nothing, which is exactly how `opengd77.com/downloads/` got mischaracterised here as
+"an empty static husk."
+
+| Release zip | Platform | Source files |
+|---|---|---|
+| `OPENGD77_MK22_20260131.zip` | NXP MK22 + HR-C6000 (GD-77, DM-1801, RD-5R) | 136 `.c` / 155 `.h` |
+| `OpenGD77_MDUV380_DM1701_20260130.zip` | STM32F405 + HR-C6000 (MD-UV380, RT3S, DM-1701) | 140 `.c` / 190 `.h` |
+| `OpenGD77_20260131_python_tools.zip` | host-side tools | — |
+
+⚠️ **Build constraint** (release `Readme.md`, VK3KYY 2026-02-02): *"Only build the
+sources using NXP MCUXpresso IDE version **v24.12 or older**. Newer versions cause
+problems with Tx audio, and currently its not known why."*
+
+⚠️ **Not GPL, and GitHub's "GPL-2.0" label on the `open-ham` mirror is wrong.** The
+actual `license.txt` is BSD-3-style with an added **clause 4: "Use of this source code
+or binary releases for commercial purposes is strictly forbidden."** Non-commercial only.
+
+⚠️ **None of this is DM-32 source.** MK22 is HR-C6000, MDUV380 is STM32F405 + HR-C6000,
+and the **DM-32 is HR-C7000**. Treat OpenGD77 as the parent codebase on cousin silicon:
+UI, menus, scan and codeplug logic share lineage; the radio and baseband layers do not.
+It is the right place to learn how a feature is *supposed* to behave — not a build base
+for this radio.
+
+Useful against the open scan regression: the scan state machine lives in
+`user_interface/uiChannelMode.c`, `uiVFOMode.c`, `uiUtilities.c` and `uiGlobals.c`,
+with radio-side handling in `hardware/HR-C6000.c`. `scan_dwell_time` ("Scan dwell") is a
+real upstream setting present in every language header — so DM-32 reports of dwell and
+delay having no effect are exercising a genuine upstream feature, not an imaginary one.
+
+Also live: [`dondch/OpenGD77-AES256`](https://github.com/dondch/OpenGD77-AES256), an
+active fork (commits through Sep 2026) built on official R20260131, targeting the MDUV380
+10W Plus. Carries scan-relevant work — `ENABLE_FAST_SCAN`, RSSI-filter sharpening while
+scanning and sweeping, VFO-sweep noise-floor averaging — plus a DMR-Association AES-256
+OFB implementation. ⚠️ Per its own README, AES-256 voice is **illegal on amateur bands in
+most countries**, and its license is non-commercial. Read it; do not transmit it.
+
+⚠️ Correction history: an earlier revision also said "no repo exists under that account."
+Wrong as well — the `rogerclarkmelbourne` account is live with ~11 repos, including
+**[`rogerclarkmelbourne/DM32`](https://github.com/rogerclarkmelbourne/DM32)** ("Baofeng
+DM32 related things", created 2026-01-24, last pushed 2026-06-25).
+
+### DM-32 tooling source: `rogerclarkmelbourne/DM32`
 
 Real, readable source — just **tooling, not firmware**. 83 files, and a recursive tree
 scan finds **zero** `.c` / `.h` / `.cpp` / `.s` / `.asm` / `.ld` / `.mk` files.
