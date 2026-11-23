@@ -5,7 +5,7 @@ Quick-reference links for the **Baofeng DM-32UV** DMR handheld.
 ## Docs
 - [SPECS.md](SPECS.md) — DM-32UV hardware specs
 - [PROGRAMMING-TOOLS.md](PROGRAMMING-TOOLS.md) — OEM CPS vs NeonPlug vs qdmr
-- [FIRMWARE.md](FIRMWARE.md) — version history, firmware families, AES-256 constant-IV status, SHA256s, recovery
+- [FIRMWARE.md](FIRMWARE.md) — version history, firmware families (stock / OpenDM32 / **OpenDMR**), AES-256 constant-IV status, SHA256s, recovery
 - [COMMUNITY.md](COMMUNITY.md) — upstream community map (infotex58.ru et al.), OpenDM-32 (OpenGD77 port), hardware RE (HR_C7000/FD6818), firmware mods
 
 > ⚠️ **There is more than one kind of DM-32UV, and flashing the wrong firmware
@@ -59,6 +59,24 @@ Rules:
 - **NeonPlug** — web-based CPS (Web Serial/BLE). Live: https://neonplug.app · Repo: https://github.com/infamy/NeonPlug
 - **dmrconfig (DM-32)** — https://github.com/emuehlstein/dmrconfig_dm32
 - **qdmr** — GUI DMR programmer (Linux/macOS). Home: https://dm3mat.de/software/qdmr/ · Repo: https://github.com/hmatuschek/qdmr
+
+## OpenDMR — P25 / NXDN / M17 on the DM-32 (new, Nov 2026)
+Repo (full source): https://github.com/va3bpf/OpenDMR
+
+A **third** firmware lineage, created 2026-11-08 — not a build of OpenDM32. From-scratch
+FreeRTOS firmware with no stock code and clean-room vocoders, adding **P25 Phase 1**
+(own IMBE, [p25-core](https://github.com/va3bpf/p25-core)), **NXDN48**, **M17** (own Codec 2),
+and **AM / USB / LSB receive** on top of DMR and FM. All digital modes verified by the
+project down to -116 dBm; an MMDVM hotspot decodes its P25 at BER 0.4 %.
+
+It works because the HR_C7000 has a bare physical-layer 4FSK mode, and P25's C4FM shares
+DMR's 4800 sym/s dibit mapping — swap the sync words and the modem is a generic C4FM
+receiver. Their `docs/p25.md` is the best public description of that path we have seen.
+
+🔶 **We have not flashed it.** Everything recorded is from the project's own releases and
+docs; our verified macOS flashing result is for OpenDM32, a different firmware. Releasing
+~daily (v0.8.2 as of 2026-11-22), so re-check versions before quoting.
+Detail, hashes and traps: [FIRMWARE.md → OpenDMR](FIRMWARE.md#opendmr--third-firmware-lineage-p25--nxdn--m17-new-nov-2026).
 
 ## OpenDM32 — OpenGD77 ported to the DM-32
 Forum thread (primary source, Russian): http://infotex58.ru/forum/index.php?topic=1168.0

@@ -2,6 +2,15 @@
 
 Version tracking and flashing notes for the Baofeng DM-32UV.
 
+**Three firmware lineages now exist for this radio.** Keep them straight — they are not
+builds of each other:
+
+| Lineage | What it is | Latest seen | Our state |
+|---|---|---|---|
+| **Stock** (`DM32.*`) | Baofeng factory firmware | **049**, archive unchanged since 2026-07-20 | Both our radios on **048**; standing rec is stay there |
+| **OpenDM32** | OpenGD77 port, uC/OS-III, binary-only, forum-distributed | 2026-09-27 HotFix | Flashed end-to-end from macOS ✅ |
+| **OpenDMR** | From-scratch FreeRTOS firmware, full source — adds **P25 / NXDN / M17 / AM / SSB** | **v0.8.2** (2026-11-22) | Documented, **not flashed** — read the section before acting |
+
 **Binaries are not committed here.** They're ~870 KB each and the community
 archive already hosts them with better provenance. This file records *which*
 image belongs on *which* hardware, plus the SHA256 so you can verify what you
@@ -195,6 +204,139 @@ aff6b4dc09dcce45847173defba26e94157cc628af86826e21e5af227bdc52dd  DM32_NRF_049_2
 
 Sizes: `01.01.049` 869,688 B · `01.L01.048` 860,416 B ·
 `NRF_049` 873,964 B · `Fanti_049` 874,028 B.
+
+## OpenDMR — third firmware lineage, P25 / NXDN / M17 (NEW, Nov 2026)
+
+**Snapshot 2026-11-23, latest release v0.8.2 (2026-11-22). This project did not exist
+at our last firmware survey.** It ships roughly one release per day, so treat every
+version number below as a dated observation, not a standing fact — re-check before quoting.
+
+[`va3bpf/OpenDMR`](https://github.com/va3bpf/OpenDMR) — "Open-source replacement firmware
+for the Baofeng DM-32 / DM-32UV DMR radio." Repo created **2026-11-08**, 14 releases in
+the first fortnight. Default branch `develop`; releases tagged `v<ver>` off `main`.
+License is "Other": source is open, free for non-commercial use, commercial use needs the
+author's permission.
+
+This is **not** a new OpenDM32 build. It is a separate, from-scratch firmware **rewritten
+on FreeRTOS** (OpenDM32 is an OpenGD77 port on uC/OS-III), carrying forward features from
+RA4FHE's work, with a new UI at the panel's native 240×320. It contains **no stock
+firmware code** — the vocoders are clean-room.
+
+### Why this matters: it is no longer a DMR-only radio
+
+The DM-32UV shipped as DMR + FM. OpenDMR has added, in two weeks:
+
+| Mode | Debut | State as of v0.8.2 |
+|---|---|---|
+| **P25 Phase 1** voice | v0.3.0 (2026-11-13) | Simplex group calls, **clear only** — no encryption, private calls, trunking or Phase 2. Own IMBE vocoder + air interface ([`va3bpf/p25-core`](https://github.com/va3bpf/p25-core)). Verified DM-32↔DM-32, and an MMDVM hotspot (Pi-Star, MMDVM_HS_Dual_Hat) decodes our P25 at **BER 0.4 %**. PTT-to-speaker ≈ 224–232 ms. |
+| **NXDN48** | v0.5.0 (2026-11-17) | Simplex group **and** individual calls, clear only — no NXDN96, trunking or encryption. Caller shows as a bare ID. Clean-room from the public **NXDN TS 1-A**. v0.8.0 cut BER at -110 dBm from 0.67 % → **0.06 %**. |
+| **M17** voice | v0.7.0 (2026-11-20) | 4FSK, 12.5 kHz, simplex, CAN 0–15. Own Codec 2 3200 encoder/decoder checked against libcodec2. Audio is acknowledged duller than AMBE+2 — Codec 2's own limitation, not a bug. |
+| **AM / USB / LSB** | v0.2.0 (2026-11-10) | **Receive only** — PTT is refused. RSSI squelch; SSB tunes in 100 Hz steps to the suppressed carrier. |
+| DMR | — | Own **AMBE+2-compatible** vocoder ([`va3bpf/dmr-vocoder`](https://github.com/va3bpf/dmr-vocoder)), no DVSI code. |
+
+`SK1 + *` cycles FM → AM → USB → LSB → DMR → P25 → NXDN → M17.
+
+Also present: channels and VFO, scan, dual watch, contacts, last heard, FM broadcast
+radio, GPS, APRS beacons (incl. satellite digipeater APRS), amateur satellite passes,
+**DMR hotspot (MMDVM)**, VOX, themes, user-defined keys.
+
+**As of v0.8.0 P25 is demodulated in software** from the discriminator recording, as NXDN,
+M17 and DMR already were. The HR_C7000 physical-layer receive path is retired to reference
+in `docs/p25.md` §1 — it dropped 112 symbols after each sync lock and needed periodic
+resets. Weak-signal behaviour is checked to **-116 dBm on DMR, P25, NXDN and M17** (v0.8.1).
+
+### Why the C7000 can do this at all
+
+`docs/p25.md` is the best public write-up we have of the modem. The HR_C7000 has a
+**physical-layer mode** (`WORK_MODE` 0x100 = 0x02) where it does bare 4FSK demodulation
+and sync detection and hands up decided bits without parsing DMR frames. P25's C4FM is
+also 4800 sym/s four-level FSK with the same dibit mapping (01=+3, 00=+1, 10=−1, 11=−3),
+so swapping the sync words (`RECV_MS_SYNC_H/L` / `RECV_BS_SYNC_H/L` → `0x805575F5` /
+`0x00FF77FF`) makes it a generic C4FM receiver.
+
+⚠ **Modem registers are 32-bit access only. Byte-writing them corrupts the register file
+and hangs the chip.**
+
+Sourcing for that section: HR_C7000 user manual v2.7 (not redistributed), plus facts —
+not code — taken from [`tylerwatt12/Open25-DM32`](https://github.com/tylerwatt12/Open25-DM32),
+deliberately avoiding its GPL source. Everything else is their own measurement.
+See also our [SPECS.md](SPECS.md): HR_C7000 = CK803S CPU + DMR modem + audio codec.
+
+### Getting it / updating
+
+Release assets (v0.8.2): `OpenDMR-0.8.2.zip` (2,237,624 B) — firmware `opendmr.bin`,
+their own CPS `opendmr-cps.html` 0.12.0, tools, install guide and user manual (EN/ZH);
+plus `opendmr-cps.html` standalone (148,440 B), `OpenDMR-0.8.2-timezone-data.zip`
+(32,981 B) and `SHA256SUMS.txt`.
+
+```
+0c9592140b83ecea7ed88eb18447dad86f8baa4dcf8423c19eee5eb2cf3caa6f  OpenDMR-0.8.2.zip
+41d3912ab05b879aca80d57488ffd7cf17144200909e5b5bfe067dabb06f420b  opendmr-cps.html
+78a17792509262537dd4ff63fdfecde7e8f726cbadc263c2c7be59c75cb3a720  OpenDMR-0.8.2-timezone-data.zip
+```
+
+**First install:** follow `docs/installation.en.md` — and back up **both** SPI flash chips
+first. The same irreplaceable-calibration warning as everywhere else in this file applies:
+see [Back up before flashing](#back-up-before-flashing--two-chips-one-irreplaceable).
+
+**Update (already on OpenDMR):** radio on, cable in —
+`py tools\debug\fw_update.py opendmr.bin --port COM6`. Settings, codeplug and languages
+are preserved. `--baud auto` is supported from v0.8.2.
+
+**Codeplug:** their own browser CPS (Chrome/Edge, nothing to install) handles settings and
+P25 / AM / SSB / NXDN / M17 channels and GB2312 Chinese names. The OpenGD77 CPS still
+works and is still the way to write the DMR ID database.
+
+### 🔴 Not verified by us
+
+**We have not flashed OpenDMR on either of our radios.** Everything above is read from the
+project's own releases and docs. Our first-hand macOS result below is for **OpenDM32**, a
+different firmware.
+
+The tooling is Python, which is promising, but the documented invocations are
+Windows-flavoured (`py`, `COM6`). **macOS is unproven for OpenDMR** — do not assume our
+[macOS flashing path](#tooling--pure-python-so-macoslinux-work) transfers until someone
+runs it. Building from source additionally needs the **Xuantie-800 GCC 13.3.0
+(`csky-elfabiv2`)** toolchain from C-Sky Development Suite 5.2.21, which is behind a
+registration wall at `xrvm.cn`; drop the CDS MinGW tree at `toolchain/`, then
+`cd src && make` → `src/build/opendmr.bin` (and `opendmr_BFUV32.bin` with the stock
+upgrade-mode header). Clone with `--recursive`: `vocoder/`, `p25/` and `nxdn/` are submodules.
+
+### Known traps worth carrying
+
+- **Updating from ≤ 0.7.0 reverts the UI to English** and shows `??` for Chinese names
+  until you write languages once via CPS → Languages → Choose folder (~2 min with the
+  Chinese font). The font format changed in 0.8.0 and languages left the zip in 0.8.1 —
+  they now live in [`va3bpf/opendmr-languages`](https://github.com/va3bpf/opendmr-languages).
+- **AFC is now off in every mode** (v0.8.1). The receive chip was hunting at 15–30 Hz
+  against slightly off-frequency stations and producing a low "du du du" on FM.
+  ⚠ Their own open question: **DMR through a repeater has not been retested with AFC off.**
+- A cable write cut short could leave the radio deaf to the cable until a power cycle
+  (`sector 0x2a0000: timeout`) — fixed in v0.8.2.
+- Still untested on air by the project: hotspot CW ID, talkaround, distance sort,
+  satellite APRS through an actual satellite.
+
+### Does this change the "stay on 048" recommendation?
+
+**No.** That recommendation is about *stock* firmware, and the stock archive has not moved
+(see below). OpenDMR is a separate decision: it replaces the stock firmware wholesale, and
+we have not flashed or evaluated it. Nothing here is a recommendation to flash.
+
+## Stock archive: no new release (checked 2026-11-23)
+
+[M7OCM/DM-32UV](https://github.com/M7OCM/DM-32UV) last saw a push 2026-09-28 (the Mods
+branch GPS NMEA zero-pad fix). Branch tips:
+
+| Branch | Last commit |
+|---|---|
+| `DM-32UV-Firmware-(most-common)` | **2026-07-20** |
+| `HR-Vocoder-DM-32UV-Firmware` | 2025-11-04 |
+| `Mods` | 2026-09-28 |
+| `CPS` | 2026-06-13 |
+| `main` | 2025-12-18 |
+
+**049 is still the ceiling on every line; there is no 050.** The file list on the
+most-common branch is unchanged from the [version history](#version-history-row--dm3201) above.
 
 ## OpenGD77 / OpenDM32 — released, and flashable from macOS
 
@@ -434,9 +576,14 @@ and survives a failed or interrupted firmware write.
 ### Source availability
 
 **OpenDM32 (this port): no public source.** A GitHub repo search for `OpenDM32` returns
-**zero** repositories; a code search matches only prose in `M7OCM/DM-32UV`. The porter's
-tree is unpublished, and binary-only is the deliberate current state (see below). For the
-DM-32 specifically: flash a released `.bin` or nothing.
+**zero** repositories (re-checked 2026-11-23); a code search matches only prose in
+`M7OCM/DM-32UV`. The porter's tree is unpublished, and binary-only is the deliberate
+current state (see below). For the DM-32 specifically: flash a released `.bin` or nothing.
+
+⚠ **Do not conclude from that search that no open DM-32 firmware source exists.**
+Since 2026-11-08 [`va3bpf/OpenDMR`](https://github.com/va3bpf/OpenDMR) publishes full
+source — a *different* firmware, not an OpenDM32 build. See
+[OpenDMR](#opendmr--third-firmware-lineage-p25--nxdn--m17-new-nov-2026).
 
 🔴 **OpenGD77 (the parent project): full source IS published — corrected 2026-09-30.**
 Earlier revisions of this file claimed there was no public OpenGD77 source. **That was
@@ -600,4 +747,8 @@ where opening the port asserts RTS.
 - [RadioReference: 049 AES-256 constant-IV verification](https://forums.radioreference.com/threads/dm-32uv-aes-256-constant-iv-bug-verified-fixed-in-firmware-049-on-air-test-36-captures.500405/)
 - [Baofeng official download area](https://www.baofengradio.com/pages/download)
 - [OpenDM32 forum thread](http://infotex58.ru/forum/index.php?topic=1168.0) (Russian) — open-firmware port, see [README](README.md)
+- [va3bpf/OpenDMR](https://github.com/va3bpf/OpenDMR) — FreeRTOS replacement firmware: DMR, P25, NXDN, M17, AM/SSB RX
+  - [`p25-core`](https://github.com/va3bpf/p25-core) (IMBE + P25 air interface) · [`dmr-vocoder`](https://github.com/va3bpf/dmr-vocoder) (AMBE+2-compatible) · [`opendmr-cps`](https://github.com/va3bpf/opendmr-cps) · [`opendmr-languages`](https://github.com/va3bpf/opendmr-languages)
+  - `docs/p25.md` — HR_C7000 physical-layer mode, register map, block reordering
+- [tylerwatt12/Open25-DM32](https://github.com/tylerwatt12/Open25-DM32) — earlier P25-on-DM32 work (GPL; OpenDMR cites its documentation only)
 - Thanks to RA4FHE for the research behind OpenDM32.
