@@ -2,14 +2,15 @@
 
 Version tracking and flashing notes for the Baofeng DM-32UV.
 
-**Three firmware lineages now exist for this radio.** Keep them straight — they are not
+**Four firmware lineages now exist for this radio.** Keep them straight — they are not
 builds of each other:
 
 | Lineage | What it is | Latest seen | Our state |
 |---|---|---|---|
 | **Stock** (`DM32.*`) | Baofeng factory firmware | **049**, archive unchanged since 2026-07-20 | Both our radios on **048**; standing rec is stay there |
 | **OpenDM32** | OpenGD77 port, uC/OS-III, binary-only, forum-distributed | 2026-09-27 HotFix | Flashed end-to-end from macOS ✅ |
-| **OpenDMR** | From-scratch FreeRTOS firmware, full source — adds **P25 / NXDN / M17 / AM / SSB** | **v0.8.2** (2026-11-22) | Documented, **not flashed** — read the section before acting |
+| **OpenDMR** | From-scratch FreeRTOS firmware, full source — adds **P25 / NXDN / M17 / AM / SSB** | **v0.9.2** (2026-11-25) | Documented, **not flashed** — read the section before acting |
+| **RadioFoundry** | MIT, from-scratch multi-radio firmware — DM-32UV is one of **eight** supported radios off one codebase — and the best measured hardware documentation that exists for this radio | no tagged releases; tracked from `main` (`900427cb`, 2026-11-25) | Documented, **not flashed**; we already use its `docs/spec/` as reference |
 
 **Binaries are not committed here.** They're ~870 KB each and the community
 archive already hosts them with better provenance. This file records *which*
@@ -90,6 +91,70 @@ and `01.*` are maintained on separate branches with mutual soft-brick warnings:
   Boards from 2025 onward may differ.
 - The build-date string inside the binaries is `2022-06-27` across every image
   and is **useless** for identification.
+
+### FD6818B: a new RF section, a different axis from the button families
+
+**New 2026-11-25. This is not a fourth "hardware family" and it does not reopen the
+2026-08-10 correction.** Everything above this subsection is about the **baseband /
+vocoder** lineage, told apart by SK1/SK2 buttons and the `01.*` vs `00.*` firmware split.
+What follows is about the **RF front end** — an independent axis. A radio can be ROW on
+the button axis and still be "new" on the RF axis. Do not collapse the two.
+
+Radios have appeared running stock firmware **`DM32.NRFB.01.050`** whose RF section needs
+a different FD6818 register set-up. Note the version string still carries the `01` ROW
+marker — which is exactly why this has to be tracked on its own axis. The newer part is
+reported as an **FD6818B**; RadioFoundry, which is the only project with measurements on
+one, carefully calls it "the newer section" and does not claim to have read a different
+part number off a chip.
+
+**Symptom on firmware that does not know about it: the receiver is dead and transmit is
+far off frequency.** The classic set-up never gets the newer part's synthesizer to lock.
+
+| Report | Measured |
+|---|---|
+| RadioFoundry `hardware-dm32.md` §8.10 | set 146.520 MHz → carrier out at **220.100 MHz**; no receive anywhere; stock builds 046–049 leave the receiver dead |
+| [`va3bpf/OpenDMR#174`](https://github.com/va3bpf/OpenDMR/issues/174) | set 430.000 MHz → carrier at **439.45 MHz, drifting** |
+
+**What it is not.** [`va3bpf/OpenDMR#162`](https://github.com/va3bpf/OpenDMR/issues/162)
+rules out the usual suspect: flashing, UI, CPS and languages all came up fine, and the
+factory calibration page at `0x000B1000` was verified **byte-identical after the flash — 0
+of 4096 bytes changed**. This is not lost calibration.
+
+⚠ **You cannot identify it from the radio's menus, from the chip ID, or from the flash
+chips.**
+
+- 固件信息 → 芯片 reports `HR-C7000`. That is the *baseband*, identical on both.
+- Per OpenDMR's `fd6818b-test1` notes, **both RF sections read back `0x4819`** — the ID
+  register does not separate them. (RadioFoundry does see register `0x3D` differ: `0x2AAB`
+  classic vs `0` on a user's newer radio — but that is one radio, and neither project
+  detects on it.)
+- Flash JEDEC is not a tell either: RadioFoundry finds a Puya `852018` data flash on
+  **both** sections, and one newer radio with a Boya `684018`. (OpenDMR #162's unit:
+  progmem `c84014`, 25Q08 1 MB; data `852018`, 25Q128 16 MB.)
+
+**The only working discriminator is behavioural: load set-up A, see whether the
+synthesizer locks, and if not load set-up B.** RadioFoundry's `rf_detect` tunes 145 MHz in
+RX and waits up to 20 ms for FD6818 register `0x0C` bit 9 to read set three times in a row
+1 ms apart; no lock ⇒ try set-up B the same way. Because set-up B locks on *both* sections,
+A is tried first, and when B locks A is retried once with 60 ms so a slow classic lock is
+not mistaken for a newer part.
+
+#### FD6818B: who supports it, and how well
+
+| Project | State (2026-11-25) |
+|---|---|
+| **Stock** | Broken on the newer section before `050`. `DM32.NRFB.01.050` is the factory build these radios ship with. |
+| **[RadioFoundry](#radiofoundry--mit-multi-radio-firmware-and-the-best-hardware-documentation-we-have)** | Detects at start-up and carries both set-ups. Confirmed by **two users with the newer section**: FM receive and transmit (carrier ~0.5 ppm high on an SDR), a clean 6 s DMR capture (107 bursts, every LC/RS/CRC good, no bit errors), and a DMR private call both ways through a local repeater. Still open on the newer section: CTCSS/DCS, battery save, and **air band AM — set-up B does not have it yet**. |
+| **OpenDMR** | `v0.9.2` claims "first support for the newer radios with the FD6818B RF chip"; the follow-on prerelease [`fd6818b-test1`](https://github.com/va3bpf/OpenDMR/releases/tag/fd6818b-test1) adds the lock probe and a **Menu → Firmware info → RF ID** page (registers `0x00`/`0x3D` at boot, plus the set-up found: `A`, `B` or `-`). Its set-up B is **taken from RadioFoundry** (`docs/spec/hardware-dm32.md` §8.10, `drivers/rf/fd6818/fd6818_setup_b.c`, MIT). 🔴 Verified only that it does not regress two **classic** radios — the author owns no newer one, and `fd6818b-test1` is explicitly "not a release." #162 and #174 are both still open. |
+
+✅ **Our two radios are not affected.** Both are `DM32.01.048`, both ridged ⇒ ROW ⇒ classic
+section / set-up A. Nothing here changes
+[stay on 048](#does-this-change-the-stay-on-048-recommendation).
+
+**Practical rule:** if you acquire a DM-32UV shipping with `DM32.NRFB.*`, assume the newer
+RF section. Do not flash stock `046`–`049` onto it — you will get a deaf radio — and do
+not expect any open firmware older than RadioFoundry's `rf_detect` / OpenDMR 0.9.2 to put
+the carrier where you asked for it.
 
 ### The soft-brick warning stands on its own
 
@@ -207,13 +272,14 @@ Sizes: `01.01.049` 869,688 B · `01.L01.048` 860,416 B ·
 
 ## OpenDMR — third firmware lineage, P25 / NXDN / M17 (NEW, Nov 2026)
 
-**Snapshot 2026-11-23, latest release v0.8.2 (2026-11-22). This project did not exist
-at our last firmware survey.** It ships roughly one release per day, so treat every
-version number below as a dated observation, not a standing fact — re-check before quoting.
+**Snapshot 2026-11-25, latest release v0.9.2 (2026-11-25 19:32 UTC). This project did not
+exist at our last firmware survey.** It ships roughly one release per day — five in the
+three days since our previous snapshot — so treat every version number below as a dated
+observation, not a standing fact. Re-check before quoting.
 
 [`va3bpf/OpenDMR`](https://github.com/va3bpf/OpenDMR) — "Open-source replacement firmware
-for the Baofeng DM-32 / DM-32UV DMR radio." Repo created **2026-11-08**, 14 releases in
-the first fortnight. Default branch `develop`; releases tagged `v<ver>` off `main`.
+for the Baofeng DM-32 / DM-32UV DMR radio." Repo created **2026-11-08**, 19 releases in
+the first two and a half weeks. Default branch `develop`; releases tagged `v<ver>` off `main`.
 License is "Other": source is open, free for non-commercial use, commercial use needs the
 author's permission.
 
@@ -226,11 +292,13 @@ firmware code** — the vocoders are clean-room.
 
 The DM-32UV shipped as DMR + FM. OpenDMR has added, in two weeks:
 
-| Mode | Debut | State as of v0.8.2 |
+| Mode | Debut | State as of v0.9.2 |
 |---|---|---|
 | **P25 Phase 1** voice | v0.3.0 (2026-11-13) | Simplex group calls, **clear only** — no encryption, private calls, trunking or Phase 2. Own IMBE vocoder + air interface ([`va3bpf/p25-core`](https://github.com/va3bpf/p25-core)). Verified DM-32↔DM-32, and an MMDVM hotspot (Pi-Star, MMDVM_HS_Dual_Hat) decodes our P25 at **BER 0.4 %**. PTT-to-speaker ≈ 224–232 ms. |
 | **NXDN48** | v0.5.0 (2026-11-17) | Simplex group **and** individual calls, clear only — no NXDN96, trunking or encryption. Caller shows as a bare ID. Clean-room from the public **NXDN TS 1-A**. v0.8.0 cut BER at -110 dBm from 0.67 % → **0.06 %**. |
-| **M17** voice | v0.7.0 (2026-11-20) | 4FSK, 12.5 kHz, simplex, CAN 0–15. Own Codec 2 3200 encoder/decoder checked against libcodec2. Audio is acknowledged duller than AMBE+2 — Codec 2's own limitation, not a bug. |
+| **M17** voice | v0.7.0 (2026-11-20) | 4FSK, 12.5 kHz, simplex, CAN 0–15. Own Codec 2 3200 encoder/decoder checked against libcodec2. Audio is acknowledged duller than AMBE+2 — Codec 2's own limitation, not a bug. Packet mode carries text from v0.9.0. |
+| **Text messaging** | v0.9.0 (2026-11-24) | DMR **and** M17. Main menu → Messages: inbox and outbox 32 each, plus 32 quick texts. DMR wire formats Motorola TMS (default), Hytera, DMR-AnyTone; ≤ 140 characters. Tested DM-32 ↔ DM-32 and through an MMDVM_HS hotspot. |
+| **DMR duplex / repeater** | v0.9.0 (2026-11-24) | Repeater and duplex-hotspot operation now done in software, voice plus APRS data, timed within 0.1 ms. |
 | **AM / USB / LSB** | v0.2.0 (2026-11-10) | **Receive only** — PTT is refused. RSSI squelch; SSB tunes in 100 Hz steps to the suppressed carrier. |
 | DMR | — | Own **AMBE+2-compatible** vocoder ([`va3bpf/dmr-vocoder`](https://github.com/va3bpf/dmr-vocoder)), no DVSI code. |
 
@@ -262,17 +330,33 @@ not code — taken from [`tylerwatt12/Open25-DM32`](https://github.com/tylerwatt
 deliberately avoiding its GPL source. Everything else is their own measurement.
 See also our [SPECS.md](SPECS.md): HR_C7000 = CK803S CPU + DMR modem + audio codec.
 
+### What changed since our v0.8.2 snapshot
+
+Five releases in three days. Read this before flashing any of them — **one of them is a
+version you must skip.**
+
+| Version | Date (UTC) | What it does |
+|---|---|---|
+| `v0.8.3` | 2026-11-24 02:09 | Factory **calibration is copied into OpenDMR's own flash area at boot** (Options → Calibration shows the factory address, plus **Copy** and **Default**). Fixes DMR and P25 transmitting an undecodable carrier when the cal table had been lost (#143/#142). GPS position over DMR direct with TA Tx = APRS fixed (#138). FM broadcast radio now yields to channel calls (#140/#135). **Channel key changes are temporary only** — no longer written to the codeplug; use channel details, SK2 + menu (#144/#141). Image 106 KB smaller (#132). CPS unchanged at 0.12.0. |
+| `v0.9.0` | 2026-11-24 19:51 | **Text messages on DMR and M17** (#156) and **DMR through a repeater or duplex hotspot in software** (#153/#154) — see the mode table. Fixes: DMR RX beeps, absent since 0.7.0 (#150/#147); `#` on a P25/NXDN/M17 channel opened DTMF instead of talkgroup entry. CPS **0.13.0**. 🔴 **Do not run this version — see below.** |
+| `v0.9.1` | 2026-11-25 14:06 | 🔴 Fixes the **APRS-over-DMR restart loop** introduced in 0.9.0 (#159). Also fixes Silent prompt mode still beeping (#160). |
+| **`v0.9.2`** | **2026-11-25 19:32** | **Current.** New dual watch; quick menus gain OK/Cancel; **keypad lock moved to SK1**; messages can be deleted from the list; and "first support for the newer radios with the FD6818B RF chip" — see [the FD6818B section](#fd6818b-a-new-rf-section-a-different-axis-from-the-button-families). |
+
+🔴 **Skip v0.9.0 entirely.** With APRS over DMR enabled it **restart-loops**: beacon →
+restart → auto-beacon on boot → restart. Reported by BG8AM, fixed in 0.9.1 (#159). If you
+are somehow stuck on 0.9.0, set APRS mode to Off or send via AFSK until you can update.
+
 ### Getting it / updating
 
-Release assets (v0.8.2): `OpenDMR-0.8.2.zip` (2,237,624 B) — firmware `opendmr.bin`,
-their own CPS `opendmr-cps.html` 0.12.0, tools, install guide and user manual (EN/ZH);
-plus `opendmr-cps.html` standalone (148,440 B), `OpenDMR-0.8.2-timezone-data.zip`
+Release assets (v0.9.2): `OpenDMR-0.9.2.zip` (2,289,091 B) — firmware `opendmr.bin`,
+their own CPS `opendmr-cps.html` **0.13.0**, tools, install guide and user manual (EN/ZH);
+plus `opendmr-cps.html` standalone (171,889 B), `OpenDMR-0.9.2-timezone-data.zip`
 (32,981 B) and `SHA256SUMS.txt`.
 
 ```
-0c9592140b83ecea7ed88eb18447dad86f8baa4dcf8423c19eee5eb2cf3caa6f  OpenDMR-0.8.2.zip
-41d3912ab05b879aca80d57488ffd7cf17144200909e5b5bfe067dabb06f420b  opendmr-cps.html
-78a17792509262537dd4ff63fdfecde7e8f726cbadc263c2c7be59c75cb3a720  OpenDMR-0.8.2-timezone-data.zip
+dc2f9adc7720f8039a057901e5f9e4370985c4c1b808aececc8941a7b4bc0b40  OpenDMR-0.9.2.zip
+f40e7e0af81bc8002fa032228e37d60aed516241d8ad30004eab16d192f89ffe  opendmr-cps.html
+331b379377524d45bd3f8400dee15c55c08af93e70fde6bcf183cfa3415603d5  OpenDMR-0.9.2-timezone-data.zip
 ```
 
 **First install:** follow `docs/installation.en.md` — and back up **both** SPI flash chips
@@ -308,6 +392,10 @@ upgrade-mode header). Clone with `--recursive`: `vocoder/`, `p25/` and `nxdn/` a
   until you write languages once via CPS → Languages → Choose folder (~2 min with the
   Chinese font). The font format changed in 0.8.0 and languages left the zip in 0.8.1 —
   they now live in [`va3bpf/opendmr-languages`](https://github.com/va3bpf/opendmr-languages).
+- **The keypad lock moved to SK1 in v0.9.2.** If you have muscle memory from an earlier
+  OpenDMR build, it is somewhere else now.
+- **Channel key changes stopped being persistent in v0.8.3.** Changing the key on a channel
+  is a temporary override; to change it for real, edit the channel (details → SK2 + menu).
 - **AFC is now off in every mode** (v0.8.1). The receive chip was hunting at 15–30 Hz
   against slightly off-frequency stations and producing a low "du du du" on FM.
   ⚠ Their own open question: **DMR through a repeater has not been retested with AFC off.**
@@ -321,6 +409,60 @@ upgrade-mode header). Clone with `--recursive`: `vocoder/`, `p25/` and `nxdn/` a
 **No.** That recommendation is about *stock* firmware, and the stock archive has not moved
 (see below). OpenDMR is a separate decision: it replaces the stock firmware wholesale, and
 we have not flashed or evaluated it. Nothing here is a recommendation to flash.
+
+## RadioFoundry — MIT multi-radio firmware, and the best hardware documentation we have
+
+**New to this file 2026-11-25.** [`RadioFoundry/RadioFoundry`](https://github.com/RadioFoundry/RadioFoundry)
+— MIT, created **2026-10-24**, 186★, `main` at `900427cb` (2026-11-25). Website and web
+installer at [radiofoundry.org](https://radiofoundry.org).
+
+This is the fourth lineage and it is not a DM-32UV project. It is **one codebase, one
+shared core, a thin board layer per radio**, and the DM-32UV is one of **eight** families
+already marked supported and run on air:
+
+> DM-32UV · DM-1701 / RT84 · DM-1801 Pro / DM-1801 · DB25-D PRO / CDR-300UV · MD-380 /
+> MD-390 / RT3 · MD-UV380 / MD-UV390 / **RT3S** · MD-9600 / RT90 · RT10
+
+with Anytone (868/878/D578, DMR-6X2, DJ-MD5), GD-77 / RD-5R, GD-88 and DM-36 in progress.
+Modes: DMR Tier II **and III (trunking)**, P25, NXDN, FM. Features that matter here: dual
+watch, APRS, text and location, hotspot plus IP networking over USB, single-frequency
+repeat and split duplex, and a browser-based installer *and* codeplug editor (Chromium,
+WebSerial — nothing installed, files never leave the machine).
+
+DM-32UV status in their own words: *"FM and DMR voice both ways, CTCSS/DCS, APRS both
+ways, GPS data, the hotspot and each split duplex half work on air. Open: FM deviation at
+12.5 kHz and an outdoor GPS fix."*
+
+### Why it is in this file even though we have not flashed it
+
+Because `docs/spec/` is the reference work for this radio and nothing else comes close.
+It is **measured**, not inferred — SDR bench captures, PLL and PA key-up timing, register
+traces, flash JEDEC IDs, SHA-256 profiles of the stock program-flash code window. Files
+worth knowing by name:
+
+| File | What it holds |
+|---|---|
+| `docs/spec/hardware-dm32.md` | The DM-32UV board: HR_C7000 SoC, FD6818 RF with its full register set-up, ST7789-class panel, ATGM336H GPS, receiver sleep, calibration layout — and §8.10, [the two RF sections](#fd6818b-a-new-rf-section-a-different-axis-from-the-button-families) |
+| `docs/spec/codec-dm32.md` | The vocoder blob in program flash, with SHA-256 profiles per stock firmware build |
+| `docs/spec/modem-hrc7000.md` | HR_C7000 modem registers, including the `RF_MODE` bit 15 RX IQ invert that differs between RF sections |
+| `docs/spec/pa-keyup.md`, `air-interface.md` | PA key-up timing and on-air framing, measured |
+| `docs/spec/cps-protocol.md` | The programming protocol over the cable |
+| `docs/spec/radios.md` | Cross-radio chip table — the fastest way to see which of our other radios share silicon |
+
+That work is already load-bearing for us indirectly: **OpenDMR's FD6818 set-up B was taken
+from RadioFoundry** (`drivers/rf/fd6818/fd6818_setup_b.c`, MIT), and RadioFoundry is the
+only project with on-air confirmation on the newer RF section.
+
+### 🔴 Not verified by us
+
+Same standing as OpenDMR: **nothing here has been flashed on our hardware.** We have not
+run the web installer, not exercised its backup/restore path, and not checked whether its
+backup captures both flash chips the way our
+[two-chip backup rule](#back-up-before-flashing--two-chips-one-irreplaceable) requires.
+All of the above is read from the repo and its docs, dated 2026-11-25.
+
+It does **not** change [stay on 048](#does-this-change-the-stay-on-048-recommendation)
+either. Treat it for now as documentation we cite and a lineage we track.
 
 ## Stock archive: no new release (checked 2026-11-23)
 
@@ -750,5 +892,9 @@ where opening the port asserts RTS.
 - [va3bpf/OpenDMR](https://github.com/va3bpf/OpenDMR) — FreeRTOS replacement firmware: DMR, P25, NXDN, M17, AM/SSB RX
   - [`p25-core`](https://github.com/va3bpf/p25-core) (IMBE + P25 air interface) · [`dmr-vocoder`](https://github.com/va3bpf/dmr-vocoder) (AMBE+2-compatible) · [`opendmr-cps`](https://github.com/va3bpf/opendmr-cps) · [`opendmr-languages`](https://github.com/va3bpf/opendmr-languages)
   - `docs/p25.md` — HR_C7000 physical-layer mode, register map, block reordering
+  - [`fd6818b-test1`](https://github.com/va3bpf/OpenDMR/releases/tag/fd6818b-test1) prerelease · issues [#162](https://github.com/va3bpf/OpenDMR/issues/162), [#174](https://github.com/va3bpf/OpenDMR/issues/174) — the FD6818B reports
+- [RadioFoundry/RadioFoundry](https://github.com/RadioFoundry/RadioFoundry) — MIT multi-radio firmware; [radiofoundry.org](https://radiofoundry.org) web installer and codeplug editor
+  - `docs/spec/hardware-dm32.md` (§8.10 = the two RF sections) · `codec-dm32.md` · `modem-hrc7000.md` · `pa-keyup.md` · `air-interface.md` · `cps-protocol.md` · `radios.md`
+  - `drivers/rf/fd6818/fd6818_setup_b.c` — the set-up B OpenDMR adopted
 - [tylerwatt12/Open25-DM32](https://github.com/tylerwatt12/Open25-DM32) — earlier P25-on-DM32 work (GPL; OpenDMR cites its documentation only)
 - Thanks to RA4FHE for the research behind OpenDM32.

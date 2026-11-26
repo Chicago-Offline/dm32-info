@@ -19,6 +19,8 @@ RadioReference all trace back there.
 | [gzalo/dm32-uv](https://github.com/gzalo/dm32-uv) | Best English/Spanish index (LU6CGA): bootloader ROM docs, voice-prompt swapping, bitmap font extraction, harmonics measurements, service manual for a same-micro radio (schematics + calibration), CHIRP→CPS CSV converter. |
 | [yo3hjv/Baofeng-DM32](https://github.com/yo3hjv/Baofeng-DM32) | YO3HJV notes (Romania). |
 | [M7OCM/DM-32UV](https://github.com/M7OCM/DM-32UV) | The community archive this repo already documents — downstream aggregation of the above. |
+| [RadioFoundry/RadioFoundry](https://github.com/RadioFoundry/RadioFoundry) `docs/spec/` | **The best measured hardware documentation that exists for this radio** (added 2026-11-25). Supersedes a lot of the "unverified" marks below — see [Open firmware: RadioFoundry](#open-firmware-radiofoundry-added-2026-11-25). |
+| [va3bpf/OpenDMR](https://github.com/va3bpf/OpenDMR) | The other from-scratch open firmware (P25/NXDN/M17). Issue tracker is now a live source of DM-32 hardware reports — see [FIRMWARE.md](FIRMWARE.md#opendmr--third-firmware-lineage-p25--nxdn--m17-new-nov-2026). |
 | [vrtp.ru topic 33914](https://vrtp.ru/index.php?showtopic=33914&st=0) | Second Russian thread. |
 | [RadioReference UV32/DM32 thread](https://forums.radioreference.com/threads/baofeng-uv32-dm32.484874/) | English-language relay of the RU mods; W4KRR's independent hex-mod verification. |
 
@@ -52,6 +54,29 @@ infotex58.ru; the official mirror still caps at `E2026.05.26.01`.
 ❌ **The firmware source remains unpublished** — `rogerclarkmelbourne/OpenGD77` 404s, no
 SourceForge project exists, and the only GitHub mirror is frozen at 2022-12. Binary-only.
 
+## Open firmware: RadioFoundry (added 2026-11-25)
+
+[`RadioFoundry/RadioFoundry`](https://github.com/RadioFoundry/RadioFoundry) — MIT,
+created 2026-10-24, 186★. Multi-radio firmware (DMR Tier II/III, P25, NXDN, FM) with the
+DM-32UV as one of eight supported families off a single codebase. Full writeup in
+[FIRMWARE.md → RadioFoundry](FIRMWARE.md#radiofoundry--mit-multi-radio-firmware-and-the-best-hardware-documentation-we-have).
+
+**Why it belongs in this file specifically:** it changes the provenance picture. Most of
+what follows below is Russian-forum reverse engineering relayed through third parties.
+RadioFoundry's `docs/spec/hardware-dm32.md` is first-party, measured, and *published with
+the code that uses it* — SDR bench captures, PLL and PA key-up timing, full FD6818
+register sequences, flash JEDEC IDs, SHA-256 profiles of the stock vocoder blob. Where it
+and a forum relay disagree, prefer RadioFoundry and say so.
+
+It also resolves two things this file previously carried as open or unverified:
+
+- Koshak's `HR_C7000` + `FD6818` attributions are independently confirmed by a second,
+  unrelated project working from its own measurements.
+- The FD6818 register map below (RSSI `0x67`, noise `0x65`) now has a complete public
+  set-up sequence alongside it, including a **second** set-up for the newer RF section
+  that ships as `DM32.NRFB.01.050` — see
+  [FIRMWARE.md → FD6818B](FIRMWARE.md#fd6818b-a-new-rf-section-a-different-axis-from-the-button-families).
+
 ## Hardware findings (Koshak board-level RE, ROW units)
 
 - **Main chip is `HR_C7000`** — CK803S C-SKY 32-bit RISC core (Alibaba), 288 KB
@@ -64,6 +89,9 @@ SourceForge project exists, and the only GitHub mirror is frozen at 2022-12. Bin
 - **RF chip is `FD6818`.** The notoriously useless S-meter is a firmware
   omission, not hardware: OEM firmware **never polls RSSI register `0x67`
   (bit[8:0], 0.5 dB LSB) or noise register `0x65` (bit[6:0])**.
+  ⚠ Newer units need a **different FD6818 set-up entirely** and the ID register does not
+  tell you which you have — both read `0x4819`. See
+  [FIRMWARE.md → FD6818B](FIRMWARE.md#fd6818b-a-new-rf-section-a-different-axis-from-the-button-families).
 - **ALPU-MP security/licensing chip on I2C** — likely the vocoder-IP enforcement.
 - LCD is probably an ILI9341. GPS is an ATGM336H.
 - Factory initial flash is via **JTAG**. CH340 programming cables work with the
@@ -119,6 +147,10 @@ Version string and diff against archive `049` not yet checked here.
 - vrtp.ru thread contents (registration-walled in places).
 - Diffing `DM32_049_20250905.bin` against archive `DM32.01.01.049`.
 - Whether OpenDM-32 will support the HR-Vocoder (`00.*`) line at all.
+- Whether RadioFoundry's web installer backs up **both** flash chips (its backup/restore
+  path is untested by us; our two-chip backup rule is non-negotiable before any flash).
+- Whether the `DM32.NRFB.*` radios differ on the button axis too — nobody has reported
+  SK1/SK2 ridging on one.
 - hellocq.net (CN) and Taiwan forums: nothing DM-32-specific surfaced in
   indexed search 2026-09-12; the CN domestic scene appears to live on
   Douyin/WeChat, which don't index. One Douyin teardown/programming video
